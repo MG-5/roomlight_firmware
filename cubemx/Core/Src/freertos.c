@@ -55,6 +55,13 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
+/* Definitions for statusLed */
+osThreadId_t statusLedHandle;
+const osThreadAttr_t statusLed_attributes = {
+  .name = "statusLed",
+  .priority = (osPriority_t) osPriorityLow1,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -62,6 +69,7 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+extern void statusLedTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -94,6 +102,9 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* creation of statusLed */
+  statusLedHandle = osThreadNew(statusLedTask, NULL, &statusLed_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
