@@ -64,10 +64,10 @@ void Error_Handler(void);
 #define EN_MOS2_GPIO_Port GPIOC
 #define EN_MOS1_Pin GPIO_PIN_15
 #define EN_MOS1_GPIO_Port GPIOC
-#define CURRENT_ADC_Pin GPIO_PIN_0
-#define CURRENT_ADC_GPIO_Port GPIOA
-#define VOLTAGE_ADC_Pin GPIO_PIN_1
+#define VOLTAGE_ADC_Pin GPIO_PIN_0
 #define VOLTAGE_ADC_GPIO_Port GPIOA
+#define CURRENT_ADC_Pin GPIO_PIN_1
+#define CURRENT_ADC_GPIO_Port GPIOA
 #define LED_RED_Pin GPIO_PIN_4
 #define LED_RED_GPIO_Port GPIOA
 #define LED_GREEN1_Pin GPIO_PIN_5

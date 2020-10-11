@@ -52,7 +52,7 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
 /* Definitions for statusLed */
@@ -60,6 +60,13 @@ osThreadId_t statusLedHandle;
 const osThreadAttr_t statusLed_attributes = {
   .name = "statusLed",
   .priority = (osPriority_t) osPriorityLow1,
+  .stack_size = 128 * 4
+};
+/* Definitions for adc */
+osThreadId_t adcHandle;
+const osThreadAttr_t adc_attributes = {
+  .name = "adc",
+  .priority = (osPriority_t) osPriorityLow2,
   .stack_size = 128 * 4
 };
 
@@ -70,6 +77,7 @@ const osThreadAttr_t statusLed_attributes = {
 
 void StartDefaultTask(void *argument);
 extern void statusLedTask(void *argument);
+extern void adcTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -105,6 +113,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of statusLed */
   statusLedHandle = osThreadNew(statusLedTask, NULL, &statusLed_attributes);
+
+  /* creation of adc */
+  adcHandle = osThreadNew(adcTask, NULL, &adc_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

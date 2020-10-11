@@ -6,6 +6,7 @@ INCDIRS			:=  \
 src 				\
 
 SOURCES			:=	\
+src/adcTask.cxx		\
 src/StatusLeds.cxx
 
 # Actual build engine
