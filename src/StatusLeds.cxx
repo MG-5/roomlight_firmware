@@ -20,12 +20,10 @@ std::array leds = {
     // green3
     StatusLed{StatusLedMode::Off, {LED_GREEN3_GPIO_Port, LED_GREEN3_Pin}}};
 
-// clang-format off
-auto &ledRed     = leds.at(0);
-auto &ledGreen1  = leds.at(1);
-auto &ledGreen2  = leds.at(2);
-auto &ledGreen3  = leds.at(3);
-// clang-format on
+StatusLed *ledRed = &leds[0];
+StatusLed *ledGreen1 = &leds[1];
+StatusLed *ledGreen2 = &leds[2];
+StatusLed *ledGreen3 = &leds[3];
 
 void setLed(StatusLed &led, bool state)
 {
@@ -35,12 +33,6 @@ void setLed(StatusLed &led, bool state)
 extern "C" void statusLedTask(void *)
 {
     TickType_t lastWakeTime = xTaskGetTickCount();
-
-    leds.at(1).mode = StatusLedMode::Flash;
-    ledRed.mode = StatusLedMode::Flash;
-    ledGreen1.mode = StatusLedMode::On;
-    ledGreen2.mode = StatusLedMode::Blink1Hz;
-    ledGreen3.mode = StatusLedMode::Blink10Hz;
 
     while (true)
     {

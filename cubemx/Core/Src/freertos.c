@@ -69,6 +69,13 @@ const osThreadAttr_t adc_attributes = {
   .priority = (osPriority_t) osPriorityLow2,
   .stack_size = 128 * 4
 };
+/* Definitions for digitalLED */
+osThreadId_t digitalLEDHandle;
+const osThreadAttr_t digitalLED_attributes = {
+  .name = "digitalLED",
+  .priority = (osPriority_t) osPriorityHigh,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -78,6 +85,7 @@ const osThreadAttr_t adc_attributes = {
 void StartDefaultTask(void *argument);
 extern void statusLedTask(void *argument);
 extern void adcTask(void *argument);
+extern void digitalLEDTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -116,6 +124,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of adc */
   adcHandle = osThreadNew(adcTask, NULL, &adc_attributes);
+
+  /* creation of digitalLED */
+  digitalLEDHandle = osThreadNew(digitalLEDTask, NULL, &digitalLED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

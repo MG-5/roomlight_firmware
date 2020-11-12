@@ -23,3 +23,8 @@ struct StatusLed
     Gpio gpio;
     bool inverted = false;
 };
+
+extern StatusLed *ledRed;
+extern StatusLed *ledGreen1;
+extern StatusLed *ledGreen2;
+extern StatusLed *ledGreen3;
