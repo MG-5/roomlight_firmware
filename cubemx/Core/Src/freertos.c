@@ -76,6 +76,20 @@ const osThreadAttr_t digitalLED_attributes = {
   .priority = (osPriority_t) osPriorityHigh,
   .stack_size = 128 * 4
 };
+/* Definitions for uartRX */
+osThreadId_t uartRXHandle;
+const osThreadAttr_t uartRX_attributes = {
+  .name = "uartRX",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+/* Definitions for uartTX */
+osThreadId_t uartTXHandle;
+const osThreadAttr_t uartTX_attributes = {
+  .name = "uartTX",
+  .priority = (osPriority_t) osPriorityBelowNormal7,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -86,6 +100,8 @@ void StartDefaultTask(void *argument);
 extern void statusLedTask(void *argument);
 extern void adcTask(void *argument);
 extern void digitalLEDTask(void *argument);
+extern void uartRXTask(void *argument);
+extern void uartTXTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -127,6 +143,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of digitalLED */
   digitalLEDHandle = osThreadNew(digitalLEDTask, NULL, &digitalLED_attributes);
+
+  /* creation of uartRX */
+  uartRXHandle = osThreadNew(uartRXTask, NULL, &uartRX_attributes);
+
+  /* creation of uartTX */
+  uartTXHandle = osThreadNew(uartTXTask, NULL, &uartTX_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

@@ -6,9 +6,11 @@ INCDIRS			:=  \
 src 				\
 
 SOURCES			:=		\
-src/adcTask.cxx			\
+src/adc.cxx				\
+src/digitalLED.cxx		\
 src/StatusLeds.cxx		\
-src/digitalLED.cxx
+src/uart.cxx			\
+src/Wifi.cxx
 
 # Actual build engine
 include core/mk/include.mk
