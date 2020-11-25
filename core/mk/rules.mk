@@ -35,6 +35,7 @@ CXXFLAGS		+= -fno-exceptions -fno-rtti -fno-unwind-tables -Wno-register -fno-mat
 LDFLAGS			+= $(SPECS)
 LDFLAGS			+= --static
 LDFLAGS			+= -Wl,--gc-sections
+LDFLAGS			+= -Wl,--print-memory-usage
 LDFLAGS			+= -Wl,-Map=$(BINARY).map
 LDLIBS			+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
