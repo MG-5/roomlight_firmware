@@ -84,10 +84,6 @@ void Error_Handler(void);
 #define ESP_RST_GPIO_Port GPIOB
 #define ESP_EN_Pin GPIO_PIN_11
 #define ESP_EN_GPIO_Port GPIOB
-#define ESP_GPIO2B12_Pin GPIO_PIN_12
-#define ESP_GPIO2B12_GPIO_Port GPIOB
-#define ESP_GPIO0B13_Pin GPIO_PIN_13
-#define ESP_GPIO0B13_GPIO_Port GPIOB
 #define SW_BLUE_Pin GPIO_PIN_15
 #define SW_BLUE_GPIO_Port GPIOA
 #define SW_GREEN_Pin GPIO_PIN_4

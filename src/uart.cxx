@@ -12,23 +12,38 @@ extern osThreadId uartRXHandle;
 extern osThreadId uartTXHandle;
 
 constexpr auto MSG_BUFFER_SIZE = 128;
-constexpr auto SEND_BUFFER_SIZE = 128;
+constexpr auto SEND_BUFFER_SIZE = 32;
 constexpr auto RX_BUFFER_SIZE = 512 + 128;
 
 auto txMessageBuffer = xMessageBufferCreate(MSG_BUFFER_SIZE);
 uint8_t sendBuffer[SEND_BUFFER_SIZE];
-std::array<uint8_t, RX_BUFFER_SIZE> rxBuffer;
+uint8_t rxBuffer[RX_BUFFER_SIZE];
 
-void usartSendData(const uint8_t *data, size_t length)
+void uartSendData(const uint8_t *data, size_t length)
 {
     xMessageBufferSend(txMessageBuffer, data, length, 0);
 }
 
-extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+void notifyUartRXTask()
 {
     auto higherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(uartRXHandle, &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
+
+extern "C" void uartIdleCallback()
+{
+    notifyUartRXTask();
+}
+
+extern "C" void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+    notifyUartRXTask();
+}
+
+extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    notifyUartRXTask();
 }
 
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -39,15 +54,15 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void waitForRXComplete()
 {
-    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 }
 
 void waitForTXComplete()
 {
-    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 }
 
-void checkRx()
+void checkRX()
 {
     static size_t previousBufferPosition = 0;
     size_t bufferPosition = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(huart2.hdmarx);
@@ -56,17 +71,17 @@ void checkRx()
     {
         if (bufferPosition > previousBufferPosition)
         {
-            Wifi::receiveData(rxBuffer.data() + previousBufferPosition,
+            Wifi::receiveData(rxBuffer + previousBufferPosition,
                               bufferPosition - previousBufferPosition);
         }
         else
         {
-            Wifi::receiveData(rxBuffer.data() + previousBufferPosition,
+            Wifi::receiveData(rxBuffer + previousBufferPosition,
                               RX_BUFFER_SIZE - previousBufferPosition);
 
             if (bufferPosition > 0)
             {
-                Wifi::receiveData(rxBuffer.data(), bufferPosition);
+                Wifi::receiveData(rxBuffer, bufferPosition);
             }
         }
     }
@@ -81,13 +96,15 @@ void checkRx()
 
 extern "C" void uartRXTask(void *)
 {
+    vTaskDelay(pdMS_TO_TICKS(250));
+
     __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
-    HAL_UART_Receive_DMA(&huart2, rxBuffer.data(), RX_BUFFER_SIZE);
+    HAL_UART_Receive_DMA(&huart2, rxBuffer, RX_BUFFER_SIZE);
 
     while (1)
     {
         waitForRXComplete();
-        checkRx();
+        checkRX();
     }
 }
 
@@ -106,7 +123,6 @@ extern "C" void uartTXTask(void *)
             xMessageBufferReset(txMessageBuffer);
             continue;
         }
-
         HAL_UART_Transmit_DMA(&huart2, sendBuffer, messageLength);
         waitForTXComplete();
     }

@@ -58,8 +58,10 @@ void MX_GPIO_Init(void)
                           |SW_BLUE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, ESP_GPIO2_Pin|ESP_GPIO0_Pin|ESP_RST_Pin|ESP_EN_Pin
-                          |ESP_GPIO2B12_Pin|ESP_GPIO0B13_Pin|SW_GREEN_Pin|SW_RED_Pin
+  HAL_GPIO_WritePin(GPIOB, ESP_GPIO2_Pin|ESP_GPIO0_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, ESP_RST_Pin|ESP_EN_Pin|SW_GREEN_Pin|SW_RED_Pin
                           |DATA1_Pin|DATA2_Pin|DATA3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PCPin PCPin PCPin */
@@ -78,16 +80,23 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB14 PB15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : PB0 PB12 PB13 PB14
+                           PB15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PBPin PBPin PBPin PBPin
-                           PBPin PBPin PBPin PBPin */
-  GPIO_InitStruct.Pin = ESP_GPIO2_Pin|ESP_GPIO0_Pin|ESP_RST_Pin|ESP_EN_Pin
-                          |ESP_GPIO2B12_Pin|ESP_GPIO0B13_Pin|SW_GREEN_Pin|SW_RED_Pin;
+  /*Configure GPIO pins : PBPin PBPin PBPin PBPin */
+  GPIO_InitStruct.Pin = ESP_GPIO2_Pin|ESP_GPIO0_Pin|SW_GREEN_Pin|SW_RED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PBPin PBPin */
+  GPIO_InitStruct.Pin = ESP_RST_Pin|ESP_EN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

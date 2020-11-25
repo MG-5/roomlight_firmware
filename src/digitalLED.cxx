@@ -1,17 +1,18 @@
 #include "FreeRTOS.h"
-#include "StatusLeds.hpp"
+#include "cmsis_os.h"
+#include "task.h"
+
 #include "dma.h"
 #include "gpio.h"
-#include "protocol.hpp"
-#include "task.h"
 #include "tim.h"
 
-auto constexpr PIXELS1 = 47;
-auto constexpr PIXELS2 = 84;
+#include "StatusLeds.hpp"
+#include "defines.hpp"
+#include "protocol.hpp"
 
 // Bit band stuff
-auto constexpr RAM_BASE = 0x20000000;
-auto constexpr RAM_BB_BASE = 0x22000000;
+constexpr auto RAM_BASE = 0x20000000;
+constexpr auto RAM_BB_BASE = 0x22000000;
 
 #define Var_ResetBit_BB(VarAddr, BitNumber)                                                        \
     (*(volatile uint32_t *)(RAM_BB_BASE | ((VarAddr - RAM_BASE) << 5) | ((BitNumber) << 2)) = 0)
@@ -47,10 +48,10 @@ digitalLEDStruct digitalLED;
 
 // WS2812 framebuffer - buffer for 2 LEDs
 uint16_t DMABitBuffer[32 * 2];
-auto constexpr BUFFER_SIZE = sizeof(DMABitBuffer) / sizeof(uint16_t);
+constexpr auto BUFFER_SIZE = sizeof(DMABitBuffer) / sizeof(uint16_t);
 
 // Define source arrays with output pins
-uint32_t constexpr dLED_IOs[] = {DATA1_Pin, DATA2_Pin, DATA3_Pin};
+constexpr uint32_t  dLED_IOs[] = {DATA1_Pin, DATA2_Pin, DATA3_Pin};
 
 void setPixelInBuffer(uint8_t column, uint16_t row, uint8_t red, uint8_t green, uint8_t blue,
                       uint8_t white)

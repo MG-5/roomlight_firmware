@@ -53,21 +53,21 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
+  .stack_size = 64 * 4
 };
 /* Definitions for statusLed */
 osThreadId_t statusLedHandle;
 const osThreadAttr_t statusLed_attributes = {
   .name = "statusLed",
   .priority = (osPriority_t) osPriorityLow1,
-  .stack_size = 128 * 4
+  .stack_size = 64 * 4
 };
 /* Definitions for adc */
 osThreadId_t adcHandle;
 const osThreadAttr_t adc_attributes = {
   .name = "adc",
   .priority = (osPriority_t) osPriorityLow2,
-  .stack_size = 128 * 4
+  .stack_size = 64 * 4
 };
 /* Definitions for digitalLED */
 osThreadId_t digitalLEDHandle;
@@ -88,7 +88,21 @@ osThreadId_t uartTXHandle;
 const osThreadAttr_t uartTX_attributes = {
   .name = "uartTX",
   .priority = (osPriority_t) osPriorityBelowNormal7,
+  .stack_size = 64 * 4
+};
+/* Definitions for processPackets */
+osThreadId_t processPacketsHandle;
+const osThreadAttr_t processPackets_attributes = {
+  .name = "processPackets",
+  .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 128 * 4
+};
+/* Definitions for wifiDaemon */
+osThreadId_t wifiDaemonHandle;
+const osThreadAttr_t wifiDaemon_attributes = {
+  .name = "wifiDaemon",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 64 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,8 +116,22 @@ extern void adcTask(void *argument);
 extern void digitalLEDTask(void *argument);
 extern void uartRXTask(void *argument);
 extern void uartTXTask(void *argument);
+extern void processPacketsTask(void *argument);
+extern void wifiDaemonTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/* Hook prototypes */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
+
+/* USER CODE BEGIN 4 */
+__weak void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+{
+   /* Run time stack overflow checking is performed if
+   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
+   called if a stack overflow is detected. */
+}
+/* USER CODE END 4 */
 
 /**
   * @brief  FreeRTOS initialization
@@ -149,6 +177,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of uartTX */
   uartTXHandle = osThreadNew(uartTXTask, NULL, &uartTX_attributes);
+
+  /* creation of processPackets */
+  processPacketsHandle = osThreadNew(processPacketsTask, NULL, &processPackets_attributes);
+
+  /* creation of wifiDaemon */
+  wifiDaemonHandle = osThreadNew(wifiDaemonTask, NULL, &wifiDaemon_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
