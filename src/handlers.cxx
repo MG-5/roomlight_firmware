@@ -38,9 +38,13 @@ extern "C" void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress)
     (void)psr;
 
     /* When the following line is hit, the variables contain the register values. */
-    HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
+
     while (1)
     {
+        HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+
+        for (int i = 0; i < 700'000; ++i)
+            asm volatile("nop");
     }
 }
 

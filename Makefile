@@ -8,6 +8,7 @@ src 				\
 SOURCES			:=		\
 src/adc.cxx				\
 src/digitalLED.cxx		\
+src/handlers.cxx        \
 src/StatusLeds.cxx		\
 src/uart.cxx			\
 src/Wifi.cxx
