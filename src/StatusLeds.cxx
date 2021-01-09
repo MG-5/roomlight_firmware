@@ -5,7 +5,7 @@
 
 #include "StatusLeds.hpp"
 
-#define LEDS_TASK_DELAY 20
+constexpr auto LEDS_TASK_DELAY = 20;
 
 std::array leds = {
     // red

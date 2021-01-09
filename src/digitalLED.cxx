@@ -1,5 +1,4 @@
 #include "FreeRTOS.h"
-#include "cmsis_os.h"
 #include "task.h"
 
 #include "dma.h"
@@ -9,6 +8,8 @@
 #include "StatusLeds.hpp"
 #include "defines.hpp"
 #include "protocol.hpp"
+
+#include <cmath>
 
 // Bit band stuff
 constexpr auto RAM_BASE = 0x20000000;
@@ -37,26 +38,23 @@ struct digitalLEDBufferItem
 
 struct digitalLEDStruct
 {
-    digitalLEDBufferItem item[2];
-    uint8_t transferComplete;
-    uint8_t startTranfer;
-    uint32_t timerPeriodCounter;
+    digitalLEDBufferItem item[3];
     uint32_t repeatCounter;
 };
 
 digitalLEDStruct digitalLED;
 
-// WS2812 framebuffer - buffer for 2 LEDs
+// buffer for two LED segments
 uint16_t DMABitBuffer[32 * 2];
 constexpr auto BUFFER_SIZE = sizeof(DMABitBuffer) / sizeof(uint16_t);
 
 // Define source arrays with output pins
-constexpr uint32_t  dLED_IOs[] = {DATA1_Pin, DATA2_Pin, DATA3_Pin};
+constexpr uint32_t dLED_IOs[] = {DATA1_Pin | DATA2_Pin | DATA3_Pin};
 
-void setPixelInBuffer(uint8_t column, uint16_t row, uint8_t red, uint8_t green, uint8_t blue,
-                      uint8_t white)
+void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8_t green,
+                      uint8_t blue, uint8_t white)
 {
-    uint32_t calcRow = (row * 32);
+    uint32_t calcRow = bufferSegment * 32;
     uint32_t invRed = ~red;
     uint32_t invGreen = ~green;
     uint32_t invBlue = ~blue;
@@ -66,24 +64,24 @@ void setPixelInBuffer(uint8_t column, uint16_t row, uint8_t red, uint8_t green, 
     {
         // Set or clear the data for the pixel
         if (((invRed) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + i)], column);
+            varSetBit(DMABitBuffer[(calcRow + i)], channel);
         else
-            varResetBit(DMABitBuffer[(calcRow + i)], column);
+            varResetBit(DMABitBuffer[(calcRow + i)], channel);
 
         if (((invGreen) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 8 + i)], column);
+            varSetBit(DMABitBuffer[(calcRow + 8 + i)], channel);
         else
-            varResetBit(DMABitBuffer[(calcRow + 8 + i)], column);
+            varResetBit(DMABitBuffer[(calcRow + 8 + i)], channel);
 
         if (((invBlue) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 16 + i)], column);
+            varSetBit(DMABitBuffer[(calcRow + 16 + i)], channel);
         else
-            varResetBit(DMABitBuffer[(calcRow + 16 + i)], column);
+            varResetBit(DMABitBuffer[(calcRow + 16 + i)], channel);
 
         if (((invWhite) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 24 + i)], column);
+            varSetBit(DMABitBuffer[(calcRow + 24 + i)], channel);
         else
-            varResetBit(DMABitBuffer[(calcRow + 24 + i)], column);
+            varResetBit(DMABitBuffer[(calcRow + 24 + i)], channel);
     }
 }
 
@@ -118,25 +116,26 @@ void transferHalfHandler(DMA_HandleTypeDef *hdma)
 {
     loadNextFramebufferData(&digitalLED.item[0], 0, true);
     loadNextFramebufferData(&digitalLED.item[1], 0, false);
+    loadNextFramebufferData(&digitalLED.item[2], 0, false);
 }
 
 void transferCompleteHandler(DMA_HandleTypeDef *hdma)
 {
     digitalLED.repeatCounter++;
 
-    if (digitalLED.repeatCounter == PIXELS2 / 2)
+    if (digitalLED.repeatCounter == MAX_PIXELS / 2)
     {
+        digitalLED.repeatCounter = 0;
+
         // Transfer of all LEDs is done, disable timer
         HAL_TIM_Base_Stop(&htim1);
-
-        // Manually set outputs to low to generate 50us reset impulse
-        DATA1_GPIO_Port->BRR = *dLED_IOs;
     }
     else
     {
         // Load bitbuffer with next RGB LED values
         loadNextFramebufferData(&digitalLED.item[0], 1, true);
         loadNextFramebufferData(&digitalLED.item[1], 1, false);
+        loadNextFramebufferData(&digitalLED.item[2], 1, false);
     }
 }
 
@@ -147,38 +146,69 @@ void sendBuffer()
     loadNextFramebufferData(&digitalLED.item[0], 0, true);
     loadNextFramebufferData(&digitalLED.item[0], 1, true);
 
-    // 84 Segments
+    // 38 segments
     digitalLED.item[1].frameBufferCounter = 0;
     loadNextFramebufferData(&digitalLED.item[1], 0, false);
     loadNextFramebufferData(&digitalLED.item[1], 1, false);
 
+    // 46 Segments
+    digitalLED.item[2].frameBufferCounter = 0;
+    loadNextFramebufferData(&digitalLED.item[2], 0, false);
+    loadNextFramebufferData(&digitalLED.item[2], 1, false);
+
     // start TIM2
     __HAL_TIM_SetCounter(&htim1, htim1.Init.Period - 1);
+
+    // reset DMA counter
+    HAL_DMA_Abort_IT(&hdma_tim1_ch1);
+    HAL_DMA_Start_IT(&hdma_tim1_ch1, reinterpret_cast<uint32_t>(DMABitBuffer),
+                     reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), BUFFER_SIZE);
+
     HAL_TIM_Base_Start(&htim1);
+}
+
+void initDigitalLED()
+{
+    digitalLED.item[0].channel = std::log2(DATA1_Pin);
+    digitalLED.item[0].frameBufferPointer = ledCurrentData;
+    digitalLED.item[0].frameBufferSize = PIXELS1;
+
+    digitalLED.item[1].channel = std::log2(DATA2_Pin);
+    digitalLED.item[1].frameBufferPointer = ledCurrentData + PIXELS1;
+    digitalLED.item[1].frameBufferSize = PIXELS2;
+
+    digitalLED.item[2].channel = std::log2(DATA3_Pin);
+    digitalLED.item[2].frameBufferPointer = ledCurrentData + PIXELS1 + PIXELS2;
+    digitalLED.item[2].frameBufferSize = PIXELS3;
+
+    HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_HALFCPLT_CB_ID, transferHalfHandler);
+    HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_CPLT_CB_ID, transferCompleteHandler);
+
+    HAL_DMA_Start(&hdma_tim1_up, reinterpret_cast<uint32_t>(dLED_IOs),
+                  reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BSRR), 1);
+
+    HAL_DMA_Start(&hdma_tim1_ch2, reinterpret_cast<uint32_t>(dLED_IOs),
+                  reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), 1);
+
+    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
+    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_CC1);
+    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_CC2);
 }
 
 extern "C" void digitalLEDTask(void *)
 {
-    auto lastWakeTime = xTaskGetTickCount();
+    initDigitalLED();
 
-    HAL_DMA_RegisterCallback(&hdma_tim1_ch2, HAL_DMA_XFER_HALFCPLT_CB_ID, transferHalfHandler);
-    HAL_DMA_RegisterCallback(&hdma_tim1_ch2, HAL_DMA_XFER_CPLT_CB_ID, transferCompleteHandler);
-
-    HAL_DMA_Start(&hdma_tim1_up, reinterpret_cast<uint32_t>(dLED_IOs),
-                  reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BSRR), BUFFER_SIZE);
-
-    HAL_DMA_Start(&hdma_tim1_ch1, reinterpret_cast<uint32_t>(DMABitBuffer),
-                  reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), BUFFER_SIZE);
-
-    HAL_DMA_Start_IT(&hdma_tim1_ch2, reinterpret_cast<uint32_t>(dLED_IOs),
-                     reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), BUFFER_SIZE);
+    ledCurrentData[86].red = 1;
 
     HAL_GPIO_WritePin(EN_MOS1_GPIO_Port, EN_MOS1_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(EN_MOS2_GPIO_Port, EN_MOS2_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(EN_MOS3_GPIO_Port, EN_MOS3_Pin, GPIO_PIN_SET);
     ledGreen1->mode = StatusLedMode::On;
-    ledGreen2->mode = StatusLedMode::On;
-    ledGreen3->mode = StatusLedMode::On;
+
+    // let led chips some time to start
+    for (int i = 0; i < 100; ++i)
+        asm volatile("nop");
+
+    auto lastWakeTime = xTaskGetTickCount();
 
     while (1)
     {
