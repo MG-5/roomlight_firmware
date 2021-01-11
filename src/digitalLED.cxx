@@ -24,6 +24,9 @@ constexpr auto RAM_BB_BASE = 0x22000000;
 #define Var_GetBit_BB(VarAddr, BitNumber)                                                          \
     (*(volatile uint32_t *)(RAM_BB_BASE | ((VarAddr - RAM_BASE) << 5) | ((BitNumber) << 2)))
 
+#define BITBAND_SRAM(address, bit)                                                                 \
+    ((__IO uint32_t *)(RAM_BB_BASE + (((uint32_t)address) - RAM_BASE) * 32 + (bit)*4))
+
 #define varSetBit(var, bit) (Var_SetBit_BB((uint32_t)&var, bit))
 #define varResetBit(var, bit) (Var_ResetBit_BB((uint32_t)&var, bit))
 #define varGetBit(var, bit) (Var_GetBit_BB((uint32_t)&var, bit))
@@ -60,29 +63,108 @@ void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8
     uint32_t invBlue = ~blue;
     uint32_t invWhite = ~white;
 
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        // Set or clear the data for the pixel
-        if (((invRed) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + i)], channel);
-        else
-            varResetBit(DMABitBuffer[(calcRow + i)], channel);
+    // Bitband optimizations with pure increments, 5us interrupts
+    auto *bitBand = BITBAND_SRAM(&DMABitBuffer[(calcRow)], channel);
 
-        if (((invGreen) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 8 + i)], channel);
-        else
-            varResetBit(DMABitBuffer[(calcRow + 8 + i)], channel);
+    // RED
+    *bitBand = (invRed >> 7);
+    bitBand += 16;
 
-        if (((invBlue) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 16 + i)], channel);
-        else
-            varResetBit(DMABitBuffer[(calcRow + 16 + i)], channel);
+    *bitBand = (invRed >> 6);
+    bitBand += 16;
 
-        if (((invWhite) << i) & 0x80)
-            varSetBit(DMABitBuffer[(calcRow + 24 + i)], channel);
-        else
-            varResetBit(DMABitBuffer[(calcRow + 24 + i)], channel);
-    }
+    *bitBand = (invRed >> 5);
+    bitBand += 16;
+
+    *bitBand = (invRed >> 4);
+    bitBand += 16;
+
+    *bitBand = (invRed >> 3);
+    bitBand += 16;
+
+    *bitBand = (invRed >> 2);
+    bitBand += 16;
+
+    *bitBand = (invRed >> 1);
+    bitBand += 16;
+
+    *bitBand = (invRed >> 0);
+    bitBand += 16;
+
+    // GREEN
+    *bitBand = (invGreen >> 7);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 6);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 5);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 4);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 3);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 2);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 1);
+    bitBand += 16;
+
+    *bitBand = (invGreen >> 0);
+    bitBand += 16;
+
+    // BLUE
+    *bitBand = (invBlue >> 7);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 6);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 5);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 4);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 3);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 2);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 1);
+    bitBand += 16;
+
+    *bitBand = (invBlue >> 0);
+    bitBand += 16;
+
+    // WHITE
+    *bitBand = (invWhite >> 7);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 6);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 5);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 4);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 3);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 2);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 1);
+    bitBand += 16;
+
+    *bitBand = (invWhite >> 0);
+    bitBand += 16;
 }
 
 void loadNextFramebufferData(digitalLEDBufferItem *bItem, uint32_t row, bool reverse)
@@ -205,7 +287,7 @@ extern "C" void digitalLEDTask(void *)
     ledGreen1->mode = StatusLedMode::On;
 
     // let led chips some time to start
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 750; ++i)
         asm volatile("nop");
 
     auto lastWakeTime = xTaskGetTickCount();
