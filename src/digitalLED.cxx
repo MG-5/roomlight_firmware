@@ -9,7 +9,19 @@
 #include "defines.hpp"
 #include "protocol.hpp"
 
+#include "limits.h"
 #include <cmath>
+
+struct DiffLEDSegment
+{
+    int16_t green = 0;
+    int16_t red = 0;
+    int16_t blue = 0;
+    int16_t white = 0;
+};
+
+DiffLEDSegment ledDiffData[PIXELS1 + PIXELS2 + PIXELS3];
+extern TaskHandle_t digitalLEDHandle;
 
 // Bit band stuff
 constexpr auto RAM_BASE = 0x20000000;
@@ -211,6 +223,12 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
 
         // Transfer of all LEDs is done, disable timer
         HAL_TIM_Base_Stop(&htim1);
+
+        // Manually set outputs to low to generate 50us reset impulse
+        for (uint32_t i = 0; i < 30; ++i)
+            asm volatile("nop");
+
+        DATA1_GPIO_Port->BRR = *dLED_IOs;
     }
     else
     {
@@ -281,7 +299,15 @@ extern "C" void digitalLEDTask(void *)
 {
     initDigitalLED();
 
-    ledCurrentData[86].red = 1;
+    uint8_t seg = 85;
+    ledCurrentData[seg++].red = 1;
+    ledCurrentData[seg++].green = 1;
+    ledCurrentData[seg++].blue = 1;
+    ledCurrentData[seg++].white = 1;
+    ledCurrentData[seg++].red = 1;
+    ledCurrentData[seg++].green = 1;
+    ledCurrentData[seg++].blue = 1;
+    ledCurrentData[seg++].white = 1;
 
     HAL_GPIO_WritePin(EN_MOS1_GPIO_Port, EN_MOS1_Pin, GPIO_PIN_SET);
     ledGreen1->mode = StatusLedMode::On;
@@ -295,6 +321,72 @@ extern "C" void digitalLEDTask(void *)
     while (1)
     {
         sendBuffer();
-        vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(500));
+
+        // wait for 500 ms unless a signal is occured
+        uint32_t notifiedValue;
+        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(500));
+        if ((notifiedValue & 0x01) != 0)
+        {
+            // turn on mosfet if needed
+        }
+    }
+}
+
+extern "C" void ledFadingTask(void *args)
+{
+    (void)args;
+    uint8_t factor;
+    bool restart = false;
+
+    while (1)
+    {
+        if (!restart)
+            xTaskNotifyWait(0, ULONG_MAX, nullptr, portMAX_DELAY);
+
+        restart = false;
+        factor = 100;
+
+        for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
+        {
+            ledDiffData[i].green = ledCurrentData[i].green - ledTargetData[i].green;
+            ledDiffData[i].red = ledCurrentData[i].red - ledTargetData[i].red;
+            ledDiffData[i].blue = ledCurrentData[i].blue - ledTargetData[i].blue;
+            ledDiffData[i].white = ledCurrentData[i].white - ledTargetData[i].white;
+        }
+
+        while (1)
+        {
+            for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
+            {
+                ledCurrentData[i].green = static_cast<uint8_t>(
+                    ledTargetData[i].green + (factor * ledDiffData[i].green) / 100); // green
+
+                ledCurrentData[i].red = static_cast<uint8_t>(
+                    ledTargetData[i].red + (factor * ledDiffData[i].red) / 100); // red
+
+                ledCurrentData[i].blue = static_cast<uint8_t>(
+                    ledTargetData[i].blue + (factor * ledDiffData[i].blue) / 100); // blue
+
+                ledCurrentData[i].white = static_cast<uint8_t>(
+                    ledTargetData[i].white + (factor * ledDiffData[i].white) / 100); // white
+            }
+
+            // trigger task to render led data
+            xTaskNotify(digitalLEDHandle, 1, eSetBits);
+
+            if (factor == 0)
+                break;
+            else
+                factor -= 2;
+
+            uint32_t notifiedValue;
+            xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(8));
+            if ((notifiedValue & 0x01) != 0)
+            {
+                // restart fading
+                restart = true;
+                break;
+            }
+        }
     }
 }

@@ -12,6 +12,9 @@
 #include "defines.hpp"
 #include "uart.hpp"
 
+extern TaskHandle_t digitalLEDHandle;
+extern TaskHandle_t ledFadingHandle;
+
 namespace
 {
 EventGroupHandle_t wifiEvents = xEventGroupCreate();
@@ -31,7 +34,6 @@ constexpr auto RX_PACKET_BUFFER_SIZE = 512 + 32;
 uint8_t dataBuffer[RX_PACKET_BUFFER_SIZE];
 auto packetBuffer = xMessageBufferCreate(1024 + 512);
 uint8_t packetFrame[RX_PACKET_BUFFER_SIZE];
-
 } // namespace
 
 namespace Wifi
@@ -154,6 +156,11 @@ void receiveData(const uint8_t *data, size_t length)
                 std::memcpy(dataBuffer, dataBuffer + messageLength, bufferPosition);
             }
         }
+        else
+        {
+            // invalid packet - reset buffer
+            bufferPosition = 0;
+        }
     }
 }
 } // namespace Wifi
@@ -204,10 +211,10 @@ extern "C" void processPacketsTask(void *)
         switch (header.command)
         {
         case LED_SET_ALL:
-            if (header.payloadSize == 4 * (PIXELS1 + PIXELS2))
+            if (header.payloadSize == 4 * (PIXELS1 + PIXELS2 + PIXELS3))
             {
-                // std::memcpy(reinterpret_cast<uint8_t *>(target_ledData), payload,
-                //            header.payloadSize);
+                std::memcpy(reinterpret_cast<uint8_t *>(ledTargetData), payload,
+                            header.payloadSize);
                 header.status = RESPONSE_OKAY;
             }
             else
@@ -217,8 +224,8 @@ extern "C" void processPacketsTask(void *)
         case LED_SET_SEGMENTS:
             if (header.payloadSize == sizeof(SetLedSegment))
             {
-                // SetLedSegment *segmentToSet = reinterpret_cast<SetLedSegment *>(payload);
-                // target_ledData[segmentToSet->position] = segmentToSet->segment;
+                SetLedSegment *segmentToSet = reinterpret_cast<SetLedSegment *>(payload);
+                ledTargetData[segmentToSet->position] = segmentToSet->segment;
                 header.status = RESPONSE_OKAY;
             }
             else
@@ -228,26 +235,27 @@ extern "C" void processPacketsTask(void *)
         case LED_FADE_SOFT:
             header.status = RESPONSE_OKAY;
             // lightState = LightState::Custom;
-            // xTaskNotify(fadingTaskHandle, 1, eSetBits);
+            xTaskNotify(ledFadingHandle, 1, eSetBits);
             break;
 
         case LED_FADE_HARD:
-            // std::memcpy(actual_ledData, target_ledData, (PIXELS1 + PIXELS2) * sizeof(uint32_t));
+            std::memcpy(ledCurrentData, ledTargetData,
+                        (PIXELS1 + PIXELS2 + PIXELS3) * sizeof(uint32_t));
             header.status = RESPONSE_OKAY;
             // lightState = LightState::Custom;
-            // xTaskNotify(ws2812bTaskHandle, 1, eSetBits);
+            xTaskNotify(digitalLEDHandle, 1, eSetBits);
             break;
 
         case LED_GET_CURRENT:
             header.status = RESPONSE_OKAY;
             header.payloadSize = 2;
-            // Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledCurrent));
+            Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledCurrent));
             continue;
             break;
         case LED_GET_VOLTAGE:
             header.status = RESPONSE_OKAY;
             header.payloadSize = 2;
-            // Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledVoltage));
+            Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledVoltage));
             continue;
             break;
         case LED_GET_ERROR_CODE:
@@ -291,14 +299,12 @@ extern "C" void wifiDaemonTask(void *)
         if (result)
         {
             ledRed->mode = StatusLedMode::Off;
-            ledGreen1->mode = StatusLedMode::Flash;
         }
         else
         {
-            ledRed->mode = StatusLedMode::Flash;
-            ledGreen1->mode = StatusLedMode::Off;
+            ledRed->mode = StatusLedMode::Blink1Hz;
         }
 
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
 }

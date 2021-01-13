@@ -87,7 +87,7 @@ const osThreadAttr_t uartRX_attributes = {
 osThreadId_t uartTXHandle;
 const osThreadAttr_t uartTX_attributes = {
   .name = "uartTX",
-  .priority = (osPriority_t) osPriorityBelowNormal7,
+  .priority = (osPriority_t) osPriorityNormal5,
   .stack_size = 64 * 4
 };
 /* Definitions for processPackets */
@@ -104,6 +104,13 @@ const osThreadAttr_t wifiDaemon_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 64 * 4
 };
+/* Definitions for ledFading */
+osThreadId_t ledFadingHandle;
+const osThreadAttr_t ledFading_attributes = {
+  .name = "ledFading",
+  .priority = (osPriority_t) osPriorityAboveNormal7,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -118,6 +125,7 @@ extern void uartRXTask(void *argument);
 extern void uartTXTask(void *argument);
 extern void processPacketsTask(void *argument);
 extern void wifiDaemonTask(void *argument);
+extern void ledFadingTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -183,6 +191,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of wifiDaemon */
   wifiDaemonHandle = osThreadNew(wifiDaemonTask, NULL, &wifiDaemon_attributes);
+
+  /* creation of ledFading */
+  ledFadingHandle = osThreadNew(ledFadingTask, NULL, &ledFading_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
