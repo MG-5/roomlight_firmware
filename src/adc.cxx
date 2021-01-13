@@ -1,19 +1,25 @@
-#include "FreeRTOS.h"
 #include "adc.h"
+#include "FreeRTOS.h"
 #include "task.h"
 
+#include "defines.hpp"
 #include <array>
 
 extern TaskHandle_t adcHandle;
 
+namespace
+{
 constexpr auto AdcChannelCount = 2;
 constexpr auto ReferenceVoltage = 3.3;
 constexpr auto AdcResolution = 12;
 constexpr auto MaxAdcValue = (1 << AdcResolution) - 1;
 
-using RawAdcResultArray = std::array<uint16_t, AdcChannelCount>;
+constexpr auto AmplifierGain = 50;
+constexpr auto Rsense = 5; // in mOhm
 
+using RawAdcResultArray = std::array<uint16_t, AdcChannelCount>;
 RawAdcResultArray adcResults;
+} // namespace
 
 void calibrateAdc()
 {
@@ -48,14 +54,11 @@ extern "C" void adcTask(void *)
         startConversion();
         waitUntilConversionFinished();
 
-        // 10k to 1k voltage divider => (10k + 1k) / 10k = 11 multiplier
-        volatile auto testVoltage = (adcResults.at(0) * 3.3f * 11.0f) / MaxAdcValue;
+        // 10k to 1k voltage divider = > (10k + 1k) / 10k = 11 multiplier
+        ledVoltage = (adcResults.at(0) * 3.3f * 11.0f) / MaxAdcValue;
 
-        constexpr auto amplifierGain = 50;
-        constexpr auto rsense = 5; // in mOhm
-
-        volatile auto testCurrent =
-            (adcResults.at(1) * 3.3f * 1000) / (MaxAdcValue * amplifierGain * rsense); // in mA
+        ledCurrent =
+            (adcResults.at(1) * 3.3f * 1000) / (MaxAdcValue * AmplifierGain * Rsense); // in mA
 
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(20));
     }
