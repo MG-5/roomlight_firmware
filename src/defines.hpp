@@ -3,7 +3,7 @@
 #include <algorithm>
 
 constexpr auto PIXELS1 = 47;
-constexpr auto PIXELS2 = 38;
+constexpr auto PIXELS2 = 37;
 constexpr auto PIXELS3 = 46;
 constexpr auto MAX_PIXELS = std::max(std::max(PIXELS1, PIXELS2), PIXELS3);
 

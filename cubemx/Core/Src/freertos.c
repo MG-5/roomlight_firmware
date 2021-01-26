@@ -111,6 +111,13 @@ const osThreadAttr_t ledFading_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal7,
   .stack_size = 128 * 4
 };
+/* Definitions for zeroChecker */
+osThreadId_t zeroCheckerHandle;
+const osThreadAttr_t zeroChecker_attributes = {
+  .name = "zeroChecker",
+  .priority = (osPriority_t) osPriorityLow3,
+  .stack_size = 64 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -126,6 +133,7 @@ extern void uartTXTask(void *argument);
 extern void processPacketsTask(void *argument);
 extern void wifiDaemonTask(void *argument);
 extern void ledFadingTask(void *argument);
+extern void zeroCheckerTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -194,6 +202,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of ledFading */
   ledFadingHandle = osThreadNew(ledFadingTask, NULL, &ledFading_attributes);
+
+  /* creation of zeroChecker */
+  zeroCheckerHandle = osThreadNew(zeroCheckerTask, NULL, &zeroChecker_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

@@ -19,7 +19,7 @@ enum class StatusLedMode
 // Configuration of a single status LEDs
 struct StatusLed
 {
-    StatusLedMode mode;
+    StatusLedMode mode = StatusLedMode::Off;
     Gpio gpio;
     bool inverted = false;
 };

@@ -9,8 +9,9 @@
 #include "defines.hpp"
 #include "protocol.hpp"
 
-#include "limits.h"
+#include <climits>
 #include <cmath>
+#include <cstring>
 
 struct DiffLEDSegment
 {
@@ -22,6 +23,16 @@ struct DiffLEDSegment
 
 DiffLEDSegment ledDiffData[PIXELS1 + PIXELS2 + PIXELS3];
 extern TaskHandle_t digitalLEDHandle;
+extern TaskHandle_t zeroCheckerHandle;
+
+bool stripEnabled[3];
+
+Gpio mosfets[3] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
+                   {EN_MOS2_GPIO_Port, EN_MOS2_Pin},
+                   {EN_MOS3_GPIO_Port, EN_MOS3_Pin}};
+
+StatusLed *mosfetLeds[3] = {ledGreen1, ledGreen2, ledGreen3};
+LEDSegment zeroSegment;
 
 // Bit band stuff
 constexpr auto RAM_BASE = 0x20000000;
@@ -267,6 +278,37 @@ void sendBuffer()
     HAL_TIM_Base_Start(&htim1);
 }
 
+bool isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
+{
+    for (auto i = fromSegment; i <= toSegment; i++)
+    {
+        // compare segment with zero
+        auto result = std::memcmp(&ledCurrentData[i], &zeroSegment, sizeof(LEDSegment));
+
+        if (result != 0)
+            return true;
+    }
+    return false;
+}
+
+void checkStripsForColor()
+{
+    if (stripEnabled[0])
+        stripEnabled[0] = isColorDataAvailable(0, PIXELS1 - 1);
+
+    if (stripEnabled[1])
+        stripEnabled[1] = isColorDataAvailable(PIXELS1, PIXELS1 + PIXELS2 - 1);
+
+    if (stripEnabled[2])
+        stripEnabled[2] = isColorDataAvailable(PIXELS1 + PIXELS2, PIXELS1 + PIXELS2 + PIXELS3 - 1);
+
+    for (auto i = 0; i < 3; i++)
+    {
+        mosfets[i].write(stripEnabled[i]);
+        mosfetLeds[i]->mode = stripEnabled[i] ? StatusLedMode::On : StatusLedMode::Off;
+    }
+}
+
 void initDigitalLED()
 {
     digitalLED.item[0].channel = std::log2(DATA1_Pin);
@@ -309,8 +351,9 @@ extern "C" void digitalLEDTask(void *)
     ledCurrentData[seg++].blue = 1;
     ledCurrentData[seg++].white = 1;
 
-    HAL_GPIO_WritePin(EN_MOS1_GPIO_Port, EN_MOS1_Pin, GPIO_PIN_SET);
-    ledGreen1->mode = StatusLedMode::On;
+    HAL_GPIO_WritePin(EN_MOS3_GPIO_Port, EN_MOS3_Pin, GPIO_PIN_SET);
+    ledGreen3->mode = StatusLedMode::On;
+    stripEnabled[2] = true;
 
     // let led chips some time to start
     for (int i = 0; i < 750; ++i)
@@ -325,16 +368,21 @@ extern "C" void digitalLEDTask(void *)
         // wait for 500 ms unless a signal is occured
         uint32_t notifiedValue;
         xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(500));
-        if ((notifiedValue & 0x01) != 0)
+        if ((notifiedValue & 0x01U) != 0)
         {
             // turn on mosfet if needed
+            stripEnabled[0] = stripEnabled[1] = stripEnabled[2] = true;
+            checkStripsForColor();
+
+            // let led chips some time to start
+            for (int i = 0; i < 750; ++i)
+                asm volatile("nop");
         }
     }
 }
 
-extern "C" void ledFadingTask(void *args)
+extern "C" void ledFadingTask(void *)
 {
-    (void)args;
     uint8_t factor;
     bool restart = false;
 
@@ -346,6 +394,7 @@ extern "C" void ledFadingTask(void *args)
         restart = false;
         factor = 100;
 
+        // calc difference between current and target data
         for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
         {
             ledDiffData[i].green = ledCurrentData[i].green - ledTargetData[i].green;
@@ -356,6 +405,7 @@ extern "C" void ledFadingTask(void *args)
 
         while (1)
         {
+            // apply difference multiplied by factor to current data
             for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
             {
                 ledCurrentData[i].green = static_cast<uint8_t>(
@@ -381,12 +431,27 @@ extern "C" void ledFadingTask(void *args)
 
             uint32_t notifiedValue;
             xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(8));
-            if ((notifiedValue & 0x01) != 0)
+            if ((notifiedValue & 0x01U) != 0)
             {
                 // restart fading
                 restart = true;
                 break;
             }
         }
+
+        // trigger mosfet zero check task if needed
+        if (!restart)
+            xTaskNotify(zeroCheckerHandle, 1, eSetBits);
+    }
+}
+
+extern "C" void zeroCheckerTask(void *)
+{
+    while (1)
+    {
+        uint32_t notifiedValue;
+        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5000));
+
+        checkStripsForColor();
     }
 }
