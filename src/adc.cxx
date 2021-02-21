@@ -2,8 +2,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "defines.hpp"
 #include <array>
+
+uint16_t ledVoltage = 0;
+uint16_t ledCurrent = 0;
 
 extern TaskHandle_t adcHandle;
 
@@ -49,7 +51,7 @@ extern "C" void adcTask(void *)
 
     calibrateAdc();
 
-    while (1)
+    while (true)
     {
         startConversion();
         waitUntilConversionFinished();

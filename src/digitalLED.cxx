@@ -6,12 +6,15 @@
 #include "tim.h"
 
 #include "StatusLeds.hpp"
-#include "defines.hpp"
+#include "digitalLED.hpp"
 #include "protocol.hpp"
 
 #include <climits>
 #include <cmath>
 #include <cstring>
+
+LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
+LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
 
 struct DiffLEDSegment
 {
@@ -21,8 +24,7 @@ struct DiffLEDSegment
     int16_t white = 0;
 };
 
-DiffLEDSegment ledDiffData[PIXELS1 + PIXELS2 + PIXELS3];
-extern TaskHandle_t digitalLEDHandle;
+DiffLEDSegment ledDiffData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
 extern TaskHandle_t zeroCheckerHandle;
 
 bool stripEnabled[3];
@@ -228,7 +230,7 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
 {
     digitalLED.repeatCounter++;
 
-    if (digitalLED.repeatCounter == MAX_PIXELS / 2)
+    if (digitalLED.repeatCounter == MaximumPixels / 2)
     {
         digitalLED.repeatCounter = 0;
 
@@ -294,13 +296,14 @@ bool isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
 void checkStripsForColor()
 {
     if (stripEnabled[0])
-        stripEnabled[0] = isColorDataAvailable(0, PIXELS1 - 1);
+        stripEnabled[0] = isColorDataAvailable(0, Strip1Pixels - 1);
 
     if (stripEnabled[1])
-        stripEnabled[1] = isColorDataAvailable(PIXELS1, PIXELS1 + PIXELS2 - 1);
+        stripEnabled[1] = isColorDataAvailable(Strip1Pixels, Strip1Pixels + Strip2Pixels - 1);
 
     if (stripEnabled[2])
-        stripEnabled[2] = isColorDataAvailable(PIXELS1 + PIXELS2, PIXELS1 + PIXELS2 + PIXELS3 - 1);
+        stripEnabled[2] = isColorDataAvailable(Strip1Pixels + Strip2Pixels,
+                                               Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
 
     for (auto i = 0; i < 3; i++)
     {
@@ -313,15 +316,15 @@ void initDigitalLED()
 {
     digitalLED.item[0].channel = std::log2(DATA1_Pin);
     digitalLED.item[0].frameBufferPointer = ledCurrentData;
-    digitalLED.item[0].frameBufferSize = PIXELS1;
+    digitalLED.item[0].frameBufferSize = Strip1Pixels;
 
     digitalLED.item[1].channel = std::log2(DATA2_Pin);
-    digitalLED.item[1].frameBufferPointer = ledCurrentData + PIXELS1;
-    digitalLED.item[1].frameBufferSize = PIXELS2;
+    digitalLED.item[1].frameBufferPointer = ledCurrentData + Strip1Pixels;
+    digitalLED.item[1].frameBufferSize = Strip2Pixels;
 
     digitalLED.item[2].channel = std::log2(DATA3_Pin);
-    digitalLED.item[2].frameBufferPointer = ledCurrentData + PIXELS1 + PIXELS2;
-    digitalLED.item[2].frameBufferSize = PIXELS3;
+    digitalLED.item[2].frameBufferPointer = ledCurrentData + Strip1Pixels + Strip2Pixels;
+    digitalLED.item[2].frameBufferSize = Strip3Pixels;
 
     HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_HALFCPLT_CB_ID, transferHalfHandler);
     HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_CPLT_CB_ID, transferCompleteHandler);
@@ -361,7 +364,7 @@ extern "C" void digitalLEDTask(void *)
 
     auto lastWakeTime = xTaskGetTickCount();
 
-    while (1)
+    while (true)
     {
         sendBuffer();
 
@@ -386,7 +389,7 @@ extern "C" void ledFadingTask(void *)
     uint8_t factor;
     bool restart = false;
 
-    while (1)
+    while (true)
     {
         if (!restart)
             xTaskNotifyWait(0, ULONG_MAX, nullptr, portMAX_DELAY);
@@ -395,7 +398,7 @@ extern "C" void ledFadingTask(void *)
         factor = 100;
 
         // calc difference between current and target data
-        for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
+        for (uint32_t i = 0; i < Strip1Pixels + Strip2Pixels + Strip3Pixels; i++)
         {
             ledDiffData[i].green = ledCurrentData[i].green - ledTargetData[i].green;
             ledDiffData[i].red = ledCurrentData[i].red - ledTargetData[i].red;
@@ -403,10 +406,10 @@ extern "C" void ledFadingTask(void *)
             ledDiffData[i].white = ledCurrentData[i].white - ledTargetData[i].white;
         }
 
-        while (1)
+        while (true)
         {
             // apply difference multiplied by factor to current data
-            for (uint32_t i = 0; i < PIXELS1 + PIXELS2 + PIXELS3; i++)
+            for (uint32_t i = 0; i < Strip1Pixels + Strip2Pixels + Strip3Pixels; i++)
             {
                 ledCurrentData[i].green = static_cast<uint8_t>(
                     ledTargetData[i].green + (factor * ledDiffData[i].green) / 100); // green
@@ -426,8 +429,8 @@ extern "C" void ledFadingTask(void *)
 
             if (factor == 0)
                 break;
-            else
-                factor -= 2;
+
+            factor -= 2;
 
             uint32_t notifiedValue;
             xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(8));
@@ -447,7 +450,7 @@ extern "C" void ledFadingTask(void *)
 
 extern "C" void zeroCheckerTask(void *)
 {
-    while (1)
+    while (true)
     {
         uint32_t notifiedValue;
         xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5000));

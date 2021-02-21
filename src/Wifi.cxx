@@ -4,16 +4,16 @@
 #include "queue.h"
 #include "task.h"
 
-#include <algorithm>
 #include <cstring>
 
 #include "StatusLeds.hpp"
 #include "Wifi.hpp"
-#include "defines.hpp"
+#include "digitalLED.hpp"
 #include "uart.hpp"
 
-extern TaskHandle_t digitalLEDHandle;
 extern TaskHandle_t ledFadingHandle;
+extern uint16_t ledVoltage;
+extern uint16_t ledCurrent;
 
 namespace
 {
@@ -45,7 +45,6 @@ Wifi::Mode getMode()
 }
 
 // -------------------------------------------------------------------------------------------------
-
 void setMode(Wifi::Mode mode, bool forceRestart)
 {
     if (mode == mode_ && !forceRestart)
@@ -73,7 +72,6 @@ void setMode(Wifi::Mode mode, bool forceRestart)
 }
 
 // -------------------------------------------------------------------------------------------------
-
 void sendPacket(const PacketHeader *header, const uint8_t *payload)
 {
 
@@ -84,7 +82,6 @@ void sendPacket(const PacketHeader *header, const uint8_t *payload)
 }
 
 // -------------------------------------------------------------------------------------------------
-
 void swapSrcDest(uint8_t &val)
 {
     uint8_t tmp = val;
@@ -93,7 +90,6 @@ void swapSrcDest(uint8_t &val)
 }
 
 // -------------------------------------------------------------------------------------------------
-
 void sendResponsePacket(PacketHeader *const header, const uint8_t *payload)
 {
     header->command |= RESPONSE_MASK;
@@ -106,7 +102,6 @@ void sendResponsePacket(PacketHeader *const header, const uint8_t *payload)
 }
 
 // -------------------------------------------------------------------------------------------------
-
 bool checkConnection()
 {
     PacketHeader h;
@@ -124,6 +119,7 @@ bool checkConnection()
     return (uxBits & EVENT_CONNECTION);
 }
 
+// -------------------------------------------------------------------------------------------------
 void receiveData(const uint8_t *data, size_t length)
 {
     if (bufferPosition + length > RX_PACKET_BUFFER_SIZE)
@@ -165,6 +161,7 @@ void receiveData(const uint8_t *data, size_t length)
 }
 } // namespace Wifi
 
+// -------------------------------------------------------------------------------------------------
 extern "C" void processPacketsTask(void *)
 {
     uint8_t *payload = nullptr;
@@ -211,7 +208,7 @@ extern "C" void processPacketsTask(void *)
         switch (header.command)
         {
         case LED_SET_ALL:
-            if (header.payloadSize == 4 * (PIXELS1 + PIXELS2 + PIXELS3))
+            if (header.payloadSize == 4 * (Strip1Pixels + Strip2Pixels + Strip3Pixels))
             {
                 std::memcpy(reinterpret_cast<uint8_t *>(ledTargetData), payload,
                             header.payloadSize);
@@ -224,7 +221,7 @@ extern "C" void processPacketsTask(void *)
         case LED_SET_SEGMENTS:
             if (header.payloadSize == sizeof(SetLedSegment))
             {
-                SetLedSegment *segmentToSet = reinterpret_cast<SetLedSegment *>(payload);
+                auto *segmentToSet = reinterpret_cast<SetLedSegment *>(payload);
                 ledTargetData[segmentToSet->position] = segmentToSet->segment;
                 header.status = RESPONSE_OKAY;
             }
@@ -240,7 +237,7 @@ extern "C" void processPacketsTask(void *)
 
         case LED_FADE_HARD:
             std::memcpy(ledCurrentData, ledTargetData,
-                        (PIXELS1 + PIXELS2 + PIXELS3) * sizeof(uint32_t));
+                        (Strip1Pixels + Strip2Pixels + Strip3Pixels) * sizeof(uint32_t));
             header.status = RESPONSE_OKAY;
             // lightState = LightState::Custom;
             xTaskNotify(digitalLEDHandle, 1, eSetBits);
@@ -252,12 +249,14 @@ extern "C" void processPacketsTask(void *)
             Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledCurrent));
             continue;
             break;
+
         case LED_GET_VOLTAGE:
             header.status = RESPONSE_OKAY;
             header.payloadSize = 2;
             Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledVoltage));
             continue;
             break;
+
         case LED_GET_ERROR_CODE:
             header.status = RESPONSE_NOT_SUPPORTED;
             break;
@@ -285,14 +284,19 @@ extern "C" void processPacketsTask(void *)
     }
 }
 
-extern "C" void wifiDaemonTask(void *)
+// -------------------------------------------------------------------------------------------------
+void initWifi()
 {
     vTaskDelay(pdMS_TO_TICKS(10));
     HAL_GPIO_WritePin(ESP_EN_GPIO_Port, ESP_EN_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(ESP_RST_GPIO_Port, ESP_RST_Pin, GPIO_PIN_SET);
-
     vTaskDelay(pdMS_TO_TICKS(500));
+}
 
+// -------------------------------------------------------------------------------------------------
+extern "C" void wifiDaemonTask(void *)
+{
+    initWifi();
     while (1)
     {
         bool result = Wifi::checkConnection();

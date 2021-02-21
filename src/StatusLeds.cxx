@@ -1,35 +1,34 @@
 #include "FreeRTOS.h"
 #include "main.h"
 #include "task.h"
-#include <array>
 
 #include "StatusLeds.hpp"
+#include "digitalLED.hpp"
 
+#include <array>
+
+namespace
+{
 constexpr auto LEDS_TASK_DELAY = 20;
 
-std::array leds = {
-    // red
-    StatusLed{StatusLedMode::Off, {LED_RED_GPIO_Port, LED_RED_Pin}},
-
-    // green1
-    StatusLed{StatusLedMode::Off, {LED_GREEN1_GPIO_Port, LED_GREEN1_Pin}},
-
-    // green2
-    StatusLed{StatusLedMode::Off, {LED_GREEN2_GPIO_Port, LED_GREEN2_Pin}},
-
-    // green3
-    StatusLed{StatusLedMode::Off, {LED_GREEN3_GPIO_Port, LED_GREEN3_Pin}}};
+std::array leds = {StatusLed{StatusLedMode::Off, {LED_RED_GPIO_Port, LED_RED_Pin}},
+                   StatusLed{StatusLedMode::Off, {LED_GREEN1_GPIO_Port, LED_GREEN1_Pin}},
+                   StatusLed{StatusLedMode::Off, {LED_GREEN2_GPIO_Port, LED_GREEN2_Pin}},
+                   StatusLed{StatusLedMode::Off, {LED_GREEN3_GPIO_Port, LED_GREEN3_Pin}}};
+} // namespace
 
 StatusLed *ledRed = &leds[0];
 StatusLed *ledGreen1 = &leds[1];
 StatusLed *ledGreen2 = &leds[2];
 StatusLed *ledGreen3 = &leds[3];
 
+// -------------------------------------------------------------------------------------------------
 void setLed(StatusLed &led, bool state)
 {
     led.gpio.write(state ^ led.inverted);
 }
 
+// -------------------------------------------------------------------------------------------------
 extern "C" void statusLedTask(void *)
 {
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -40,7 +39,6 @@ extern "C" void statusLedTask(void *)
         {
             switch (led.mode)
             {
-            default:
             case StatusLedMode::Off:
                 setLed(led, false);
                 break;

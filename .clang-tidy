@@ -1,5 +1,7 @@
 Checks: abseil-*,
 
+        altera-struct-pack-align,
+
         bugprone-*,
         -bugprone-bool-pointer-implicit-conversion,
         -bugprone-exception-escape,
@@ -32,7 +34,6 @@ Checks: abseil-*,
 
         hicpp-exception-baseclass,
         hicpp-multiway-paths-covered,
-        hicpp-signed-bitwise,
 
         misc-*,
         -misc-non-private-member-variables-in-classes,
@@ -40,10 +41,8 @@ Checks: abseil-*,
 
         modernize-*,
         -modernize-avoid-c-arrays,
-        -modernize-use-bool-literals,
         -modernize-use-default-member-init,
         -modernize-use-trailing-return-type,
-        -modernize-use-using,
 
         mpi-*,
 
@@ -56,16 +55,11 @@ Checks: abseil-*,
         readability-*,
         -readability-braces-around-statements,
         -readability-convert-member-functions-to-static,
-        -readability-else-after-return,
         -readability-function-size,
-        -readability-identifier-naming,
         -readability-implicit-bool-conversion,
         -readability-isolate-declaration,
         -readability-magic-numbers,
         -readability-named-parameter,
         -readability-qualified-auto,
         -readability-redundant-access-specifiers,
-        -readability-redundant-member-init,
-        -readability-redundant-preprocessor,
-        -readability-simplify-boolean-expr,
         -readability-uppercase-literal-suffix,
