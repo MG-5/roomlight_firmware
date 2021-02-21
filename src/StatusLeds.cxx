@@ -4,12 +4,13 @@
 
 #include "StatusLeds.hpp"
 #include "digitalLED.hpp"
+#include "helpers/freertos.hpp"
 
 #include <array>
 
 namespace
 {
-constexpr auto LEDS_TASK_DELAY = 20;
+constexpr auto TaskFrequency = 25.0_Hz;
 
 std::array leds = {StatusLed{StatusLedMode::Off, {LED_RED_GPIO_Port, LED_RED_Pin}},
                    StatusLed{StatusLedMode::Off, {LED_GREEN1_GPIO_Port, LED_GREEN1_Pin}},
@@ -110,6 +111,6 @@ extern "C" void statusLedTask(void *)
             break;
         }
 
-        vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(LEDS_TASK_DELAY));
+        vTaskDelayUntil(&lastWakeTime, toOsTicks(TaskFrequency));
     }
 }

@@ -11,11 +11,11 @@
                 "${workspaceFolder}/cubemx/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
                 "${workspaceFolder}/cubemx/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3",
                 "${workspaceFolder}/cubemx/Drivers/CMSIS/Device/ST/STM32F1xx/Include",
-                "${workspaceFolder}/cubemx/Drivers/CMSIS/Include"
+                "${workspaceFolder}/cubemx/Drivers/CMSIS/Include",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/util/include"
             ],
             "defines": [
-                "STM32F1",
-                "STM32F103CB",
                 "STM32F103xB"
             ],
             "compilerPath": "arm-none-eabi-gcc",
