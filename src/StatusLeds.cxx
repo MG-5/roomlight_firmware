@@ -14,13 +14,19 @@ constexpr auto LEDS_TASK_DELAY = 20;
 std::array leds = {StatusLed{StatusLedMode::Off, {LED_RED_GPIO_Port, LED_RED_Pin}},
                    StatusLed{StatusLedMode::Off, {LED_GREEN1_GPIO_Port, LED_GREEN1_Pin}},
                    StatusLed{StatusLedMode::Off, {LED_GREEN2_GPIO_Port, LED_GREEN2_Pin}},
-                   StatusLed{StatusLedMode::Off, {LED_GREEN3_GPIO_Port, LED_GREEN3_Pin}}};
+                   StatusLed{StatusLedMode::Off, {LED_GREEN3_GPIO_Port, LED_GREEN3_Pin}},
+                   StatusLed{StatusLedMode::Off, {SW_RED_GPIO_Port, SW_RED_Pin}, true},
+                   StatusLed{StatusLedMode::Off, {SW_GREEN_GPIO_Port, SW_GREEN_Pin}, true},
+                   StatusLed{StatusLedMode::Off, {SW_BLUE_GPIO_Port, SW_BLUE_Pin}, true}};
 } // namespace
 
 StatusLed *ledRed = &leds[0];
 StatusLed *ledGreen1 = &leds[1];
 StatusLed *ledGreen2 = &leds[2];
 StatusLed *ledGreen3 = &leds[3];
+StatusLed *ledSwitchRed = &leds[4];
+StatusLed *ledSwitchGreen = &leds[5];
+StatusLed *ledSwitchBlue = &leds[6];
 
 // -------------------------------------------------------------------------------------------------
 void setLed(StatusLed &led, bool state)
@@ -76,6 +82,34 @@ extern "C" void statusLedTask(void *)
             break;
             }
         }
+
+        switch (currentLightState)
+        {
+        case LightState::Off:
+            ledSwitchRed->mode = StatusLedMode::On;
+            ledSwitchGreen->mode = StatusLedMode::Off;
+            ledSwitchBlue->mode = StatusLedMode::Off;
+            break;
+
+        case LightState::FullWhite:
+        case LightState::MediumWhite:
+        case LightState::LowWhite:
+            ledSwitchRed->mode = StatusLedMode::Off;
+            ledSwitchGreen->mode = StatusLedMode::On;
+            ledSwitchBlue->mode = StatusLedMode::Off;
+            break;
+
+        case LightState::Custom:
+            ledSwitchRed->mode = StatusLedMode::Off;
+            ledSwitchGreen->mode = StatusLedMode::Off;
+            ledSwitchBlue->mode = StatusLedMode::On;
+            break;
+
+        case LightState::System:
+            // do nothing
+            break;
+        }
+
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(LEDS_TASK_DELAY));
     }
 }

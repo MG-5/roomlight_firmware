@@ -13,3 +13,15 @@ constexpr auto MaximumPixels = std::max(std::max(Strip1Pixels, Strip2Pixels), St
 extern TaskHandle_t digitalLEDHandle;
 extern LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
 extern LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
+
+enum class LightState
+{
+    Off,
+    FullWhite,
+    MediumWhite,
+    LowWhite,
+    Custom,
+    System
+};
+
+extern LightState currentLightState;

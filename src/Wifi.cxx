@@ -4,6 +4,7 @@
 #include "queue.h"
 #include "task.h"
 
+#include <climits>
 #include <cstring>
 
 #include "StatusLeds.hpp"
@@ -12,6 +13,7 @@
 #include "uart.hpp"
 
 extern TaskHandle_t ledFadingHandle;
+extern TaskHandle_t wifiDaemonHandle;
 extern uint16_t ledVoltage;
 extern uint16_t ledCurrent;
 

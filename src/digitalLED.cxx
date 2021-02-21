@@ -15,6 +15,7 @@
 
 LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
 LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
+LightState currentLightState = LightState::Off;
 
 struct DiffLEDSegment
 {
@@ -310,6 +311,9 @@ void checkStripsForColor()
         mosfets[i].write(stripEnabled[i]);
         mosfetLeds[i]->mode = stripEnabled[i] ? StatusLedMode::On : StatusLedMode::Off;
     }
+
+    if (!stripEnabled[0] && !stripEnabled[1] && !stripEnabled[2])
+        currentLightState = LightState::Off;
 }
 
 void initDigitalLED()
