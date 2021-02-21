@@ -12,10 +12,13 @@
 #include "digitalLED.hpp"
 #include "uart.hpp"
 
+#include "units/si/current.hpp"
+#include "units/si/voltage.hpp"
+
 extern TaskHandle_t ledFadingHandle;
 extern TaskHandle_t wifiDaemonHandle;
-extern uint16_t ledVoltage;
-extern uint16_t ledCurrent;
+extern units::si::Voltage ledVoltage;
+extern units::si::Current ledCurrent;
 
 namespace
 {
@@ -206,7 +209,8 @@ extern "C" void processPacketsTask(void *)
             }
             continue;
         }
-
+        
+        xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
         switch (header.command)
         {
         case LED_SET_ALL:
@@ -233,7 +237,7 @@ extern "C" void processPacketsTask(void *)
 
         case LED_FADE_SOFT:
             header.status = RESPONSE_OKAY;
-            // lightState = LightState::Custom;
+            currentLightState = LightState::Custom;
             xTaskNotify(ledFadingHandle, 1, eSetBits);
             break;
 
@@ -241,7 +245,7 @@ extern "C" void processPacketsTask(void *)
             std::memcpy(ledCurrentData, ledTargetData,
                         (Strip1Pixels + Strip2Pixels + Strip3Pixels) * sizeof(uint32_t));
             header.status = RESPONSE_OKAY;
-            // lightState = LightState::Custom;
+            currentLightState = LightState::Custom;
             xTaskNotify(digitalLEDHandle, 1, eSetBits);
             break;
 
@@ -299,18 +303,18 @@ void initWifi()
 extern "C" void wifiDaemonTask(void *)
 {
     initWifi();
-    while (1)
-    {
-        bool result = Wifi::checkConnection();
-        if (result)
-        {
-            ledRed->mode = StatusLedMode::Off;
-        }
-        else
-        {
-            ledRed->mode = StatusLedMode::Blink1Hz;
-        }
+    bool result = false;
 
-        vTaskDelay(500);
+    while (true)
+    {
+        ledRed->mode = result ? StatusLedMode::Off : StatusLedMode::Blink1Hz;
+
+        uint32_t notifiedValue;
+        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(2000));
+        if ((notifiedValue & 1) != 0)
+            result = true;
+
+        else
+            result = Wifi::checkConnection();
     }
 }
