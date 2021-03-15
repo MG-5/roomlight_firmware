@@ -42,7 +42,7 @@ extern "C" void buttonUpdateTask(void *)
     }
 }
 
-extern "C" void uiTask(void *)
+extern "C" void uiUpdateTask(void *)
 {
 
     while (true)
@@ -92,7 +92,7 @@ extern "C" void uiTask(void *)
                 for (auto &targetSeg : ledTargetData)
                     targetSeg = seg;
 
-                xTaskNotify(ledFadingTaskHandle, 1, eSetBits);
+                xTaskNotify(ledFadingHandle, 1, eSetBits);
             }
         }
         break;

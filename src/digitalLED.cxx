@@ -30,9 +30,9 @@ extern TaskHandle_t zeroCheckerHandle;
 
 bool stripEnabled[3];
 
-Gpio mosfets[3] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
-                   {EN_MOS2_GPIO_Port, EN_MOS2_Pin},
-                   {EN_MOS3_GPIO_Port, EN_MOS3_Pin}};
+util::Gpio mosfets[3] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
+                         {EN_MOS2_GPIO_Port, EN_MOS2_Pin},
+                         {EN_MOS3_GPIO_Port, EN_MOS3_Pin}};
 
 StatusLed *mosfetLeds[3] = {ledGreen1, ledGreen2, ledGreen3};
 LEDSegment zeroSegment;

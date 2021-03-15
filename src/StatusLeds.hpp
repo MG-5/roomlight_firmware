@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpio.hpp"
+#include "util/gpio.hpp"
 #include <cstdint>
 
 // Lighting mode of a status LED
@@ -20,7 +20,7 @@ enum class StatusLedMode
 struct StatusLed
 {
     StatusLedMode mode = StatusLedMode::Off;
-    Gpio gpio;
+    util::Gpio gpio;
     bool inverted = false;
 };
 

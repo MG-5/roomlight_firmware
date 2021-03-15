@@ -6,39 +6,39 @@ void Button::update(const units::si::Time timePassed)
 
     switch (internalState)
     {
-        case InternalState::Idle:
-            if (state == State::Pressed)
-            {
-                internalState = InternalState::Pressed;
-                loadTimer();
-            }
-            break;
+    case InternalState::Idle:
+        if (state == State::Pressed)
+        {
+            internalState = InternalState::Pressed;
+            loadTimer();
+        }
+        break;
 
-        case InternalState::Pressed:
-            updateTimer(timePassed);
+    case InternalState::Pressed:
+        updateTimer(timePassed);
 
-            if (state == State::NotPressed)
-            {
-                if (getPassedTime() >= DebounceTime)
-                    callback(id, Action::ShortPress);
+        if (state == State::NotPressed)
+        {
+            if (getPassedTime() >= DebounceTime)
+                callback(Action::ShortPress);
 
-                internalState = InternalState::Idle;
-            }
-            else if (getPassedTime() >= longPressTime)
-            {
-                callback(id, Action::LongPress);
-                internalState = InternalState::LongPress;
-            }
-            break;
+            internalState = InternalState::Idle;
+        }
+        else if (getPassedTime() >= longPressTime)
+        {
+            callback(Action::LongPress);
+            internalState = InternalState::LongPress;
+        }
+        break;
 
-        case InternalState::LongPress:
-            if (state == State::NotPressed)
-            {
-                callback(id, Action::StopLongPress);
-                internalState = InternalState::Idle;
-            }
+    case InternalState::LongPress:
+        if (state == State::NotPressed)
+        {
+            callback(Action::StopLongPress);
+            internalState = InternalState::Idle;
+        }
 
-            break;
+        break;
     }
 }
 

@@ -148,8 +148,8 @@ extern void processPacketsTask(void *argument);
 extern void wifiDaemonTask(void *argument);
 extern void ledFadingTask(void *argument);
 extern void zeroCheckerTask(void *argument);
-void buttonUpdateTask(void *argument);
-void uiUpdateTask(void *argument);
+extern void buttonUpdateTask(void *argument);
+extern void uiUpdateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -254,42 +254,6 @@ void StartDefaultTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
-}
-
-/* USER CODE BEGIN Header_buttonUpdateTask */
-/**
-* @brief Function implementing the buttonUpdate thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_buttonUpdateTask */
-void buttonUpdateTask(void *argument)
-{
-  /* USER CODE BEGIN buttonUpdateTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END buttonUpdateTask */
-}
-
-/* USER CODE BEGIN Header_uiUpdateTask */
-/**
-* @brief Function implementing the uiUpdate thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_uiUpdateTask */
-void uiUpdateTask(void *argument)
-{
-  /* USER CODE BEGIN uiUpdateTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END uiUpdateTask */
 }
 
 /* Private application code --------------------------------------------------*/
