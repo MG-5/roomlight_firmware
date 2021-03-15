@@ -118,6 +118,20 @@ const osThreadAttr_t zeroChecker_attributes = {
   .priority = (osPriority_t) osPriorityLow3,
   .stack_size = 64 * 4
 };
+/* Definitions for buttonUpdate */
+osThreadId_t buttonUpdateHandle;
+const osThreadAttr_t buttonUpdate_attributes = {
+  .name = "buttonUpdate",
+  .priority = (osPriority_t) osPriorityLow3,
+  .stack_size = 64 * 4
+};
+/* Definitions for uiUpdate */
+osThreadId_t uiUpdateHandle;
+const osThreadAttr_t uiUpdate_attributes = {
+  .name = "uiUpdate",
+  .priority = (osPriority_t) osPriorityLow4,
+  .stack_size = 64 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -134,6 +148,8 @@ extern void processPacketsTask(void *argument);
 extern void wifiDaemonTask(void *argument);
 extern void ledFadingTask(void *argument);
 extern void zeroCheckerTask(void *argument);
+void buttonUpdateTask(void *argument);
+void uiUpdateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -206,6 +222,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of zeroChecker */
   zeroCheckerHandle = osThreadNew(zeroCheckerTask, NULL, &zeroChecker_attributes);
 
+  /* creation of buttonUpdate */
+  buttonUpdateHandle = osThreadNew(buttonUpdateTask, NULL, &buttonUpdate_attributes);
+
+  /* creation of uiUpdate */
+  uiUpdateHandle = osThreadNew(uiUpdateTask, NULL, &uiUpdate_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -232,6 +254,42 @@ void StartDefaultTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
+}
+
+/* USER CODE BEGIN Header_buttonUpdateTask */
+/**
+* @brief Function implementing the buttonUpdate thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_buttonUpdateTask */
+void buttonUpdateTask(void *argument)
+{
+  /* USER CODE BEGIN buttonUpdateTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END buttonUpdateTask */
+}
+
+/* USER CODE BEGIN Header_uiUpdateTask */
+/**
+* @brief Function implementing the uiUpdate thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_uiUpdateTask */
+void uiUpdateTask(void *argument)
+{
+  /* USER CODE BEGIN uiUpdateTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END uiUpdateTask */
 }
 
 /* Private application code --------------------------------------------------*/

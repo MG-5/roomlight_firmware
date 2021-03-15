@@ -11,6 +11,7 @@ constexpr auto Strip3Pixels = 46;
 constexpr auto MaximumPixels = std::max(std::max(Strip1Pixels, Strip2Pixels), Strip3Pixels);
 
 extern TaskHandle_t digitalLEDHandle;
+extern TaskHandle_t ledFadingTaskHandle;
 extern LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
 extern LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
 

@@ -7,6 +7,8 @@ src                 \
 src/util/include
 
 SOURCES :=                      \
+src/button/button_handler.cxx   \
+src/button/Button.cxx           \
 src/adc.cxx                     \
 src/digitalLED.cxx              \
 src/handlers.cxx                \
