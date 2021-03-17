@@ -63,8 +63,8 @@ struct digitalLEDStruct
 digitalLEDStruct digitalLED;
 
 // buffer for two LED segments
-uint16_t DMABitBuffer[32 * 2];
-constexpr auto BUFFER_SIZE = sizeof(DMABitBuffer) / sizeof(uint16_t);
+constexpr auto DMABitBufferSize = 32 * 2;
+uint16_t DMABitBuffer[DMABitBufferSize];
 
 // Define source arrays with output pins
 constexpr uint32_t dLED_IOs[] = {DATA1_Pin | DATA2_Pin | DATA3_Pin};
@@ -266,7 +266,7 @@ void sendBuffer()
     // reset DMA counter
     HAL_DMA_Abort_IT(&hdma_tim1_ch1);
     HAL_DMA_Start_IT(&hdma_tim1_ch1, reinterpret_cast<uint32_t>(DMABitBuffer),
-                     reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), BUFFER_SIZE);
+                     reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), DMABitBufferSize);
 
     HAL_TIM_Base_Start(&htim1);
 }

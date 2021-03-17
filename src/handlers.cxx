@@ -2,6 +2,10 @@
 #include "main.h"
 #include "task.h"
 
+#include "util/gpio.hpp"
+
+util::Gpio ledError{LED_RED_GPIO_Port, LED_RED_Pin};
+
 extern "C" void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress)
 {
     /* These are volatile to try and prevent the compiler/linker optimising them
@@ -39,9 +43,9 @@ extern "C" void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress)
 
     /* When the following line is hit, the variables contain the register values. */
 
-    while (1)
+    while (true)
     {
-        HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+        ledError.toggle();
 
         for (int i = 0; i < 700'000; ++i)
             asm volatile("nop");
@@ -71,9 +75,12 @@ extern "C" void hard_fault_handler(void)
 
 extern "C" void vApplicationMallocFailedHook(void)
 {
-    HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-    while (1)
+    while (true)
     {
+        ledError.toggle();
+
+        for (int i = 0; i < 1400'000; ++i)
+            asm volatile("nop");
     }
 }
 
@@ -82,8 +89,11 @@ extern "C" void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCH
     (void)pxTask;
     (void)pcTaskName;
 
-    HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-    while (1)
+    while (true)
     {
+        ledError.toggle();
+
+        for (int i = 0; i < 1100'000; ++i)
+            asm volatile("nop");
     }
 }
