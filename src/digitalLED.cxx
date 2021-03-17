@@ -13,8 +13,8 @@
 #include <cmath>
 #include <cstring>
 
-LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
-LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels]{};
+LEDSegment ledCurrentData[TotalPixels]{};
+LEDSegment ledTargetData[TotalPixels]{};
 LightState currentLightState = LightState::Off;
 
 struct DiffLEDSegment
@@ -25,7 +25,7 @@ struct DiffLEDSegment
     int16_t white = 0;
 };
 
-DiffLEDSegment ledDiffData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
+DiffLEDSegment ledDiffData[TotalPixels];
 extern TaskHandle_t zeroCheckerHandle;
 
 bool stripEnabled[3];
@@ -221,7 +221,7 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
 {
     digitalLED.repeatCounter++;
 
-    if (digitalLED.repeatCounter == MaximumPixels / 2)
+    if (digitalLED.repeatCounter == LongestStrip / 2)
     {
         digitalLED.repeatCounter = 0;
 
@@ -392,7 +392,7 @@ extern "C" void ledFadingTask(void *)
         factor = 100;
 
         // calc difference between current and target data
-        for (uint32_t i = 0; i < Strip1Pixels + Strip2Pixels + Strip3Pixels; i++)
+        for (uint32_t i = 0; i < TotalPixels; i++)
         {
             ledDiffData[i].green = ledCurrentData[i].green - ledTargetData[i].green;
             ledDiffData[i].red = ledCurrentData[i].red - ledTargetData[i].red;
@@ -403,7 +403,7 @@ extern "C" void ledFadingTask(void *)
         while (true)
         {
             // apply difference multiplied by factor to current data
-            for (uint32_t i = 0; i < Strip1Pixels + Strip2Pixels + Strip3Pixels; i++)
+            for (uint32_t i = 0; i < TotalPixels; i++)
             {
                 ledCurrentData[i].green = static_cast<uint8_t>(
                     ledTargetData[i].green + (factor * ledDiffData[i].green) / 100); // green

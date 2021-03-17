@@ -15,7 +15,6 @@
 #include "units/si/current.hpp"
 #include "units/si/voltage.hpp"
 
-extern TaskHandle_t ledFadingHandle;
 extern TaskHandle_t wifiDaemonHandle;
 extern units::si::Voltage ledVoltage;
 extern units::si::Current ledCurrent;
@@ -23,22 +22,27 @@ extern units::si::Current ledCurrent;
 namespace
 {
 EventGroupHandle_t wifiEvents = xEventGroupCreate();
-constexpr auto EVENT_CONNECTION = 1 << 0;
-constexpr auto EVENT_OTA_STARTED = 1 << 1;
-constexpr auto EVENT_OTA_FINISHED = 1 << 2;
+constexpr auto EventConnection = 1 << 0;
+constexpr auto EventWifiUpgradeStarted = 1 << 1;
+constexpr auto EventWifiUpgradeFinished = 1 << 2;
 
 Wifi::Mode mode_ = Wifi::Mode::Disabled;
 
 // TX
-constexpr auto TX_PACKET_BUFFER_SIZE = 64;
-uint8_t finalFrame[TX_PACKET_BUFFER_SIZE];
+constexpr auto TxPacketBufferSize = 64;
+uint8_t finalFrame[TxPacketBufferSize];
 
 // RX
 size_t bufferPosition = 0;
-constexpr auto RX_PACKET_BUFFER_SIZE = 512 + 32;
-uint8_t dataBuffer[RX_PACKET_BUFFER_SIZE];
+constexpr auto RxPacketBufferSize = 512 + 32;
+uint8_t dataBuffer[RxPacketBufferSize];
+uint8_t packetFrame[RxPacketBufferSize];
 auto packetBuffer = xMessageBufferCreate(1024 + 512);
-uint8_t packetFrame[RX_PACKET_BUFFER_SIZE];
+
+util::Gpio espGpio0{ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin};
+util::Gpio espEnable{ESP_EN_GPIO_Port, ESP_EN_Pin};
+util::Gpio espReset{ESP_RST_GPIO_Port, ESP_RST_Pin};
+
 } // namespace
 
 namespace Wifi
@@ -55,23 +59,21 @@ void setMode(Wifi::Mode mode, bool forceRestart)
     if (mode == mode_ && !forceRestart)
         return;
 
-    // Clear receive queues
-    // xQueueReset(wifiRawRxQueue);
-    // xQueueReset(wifiFrameRxQueue);
+    espEnable.write(util::Gpio::Low);
+    espReset.write(util::Gpio::Low);
+
+    xMessageBufferReset(packetBuffer);
 
     if (mode == Mode::Programming)
-        HAL_GPIO_WritePin(ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin, GPIO_PIN_RESET);
+        espGpio0.write(util::Gpio::Low);
 
     else if (mode == Mode::Normal)
-        HAL_GPIO_WritePin(ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin, GPIO_PIN_SET);
-
-    HAL_GPIO_WritePin(ESP_EN_GPIO_Port, ESP_EN_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(ESP_RST_GPIO_Port, ESP_RST_Pin, GPIO_PIN_RESET);
+        espGpio0.write(util::Gpio::High);
 
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    HAL_GPIO_WritePin(ESP_EN_GPIO_Port, ESP_EN_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(ESP_RST_GPIO_Port, ESP_RST_Pin, GPIO_PIN_SET);
+    espEnable.write(util::Gpio::High);
+    espReset.write(util::Gpio::High);
 
     mode_ = mode;
 }
@@ -79,7 +81,6 @@ void setMode(Wifi::Mode mode, bool forceRestart)
 // -------------------------------------------------------------------------------------------------
 void sendPacket(const PacketHeader *header, const uint8_t *payload)
 {
-
     std::memcpy(finalFrame, header, sizeof(PacketHeader));
     std::memcpy(finalFrame + sizeof(PacketHeader), payload, header->payloadSize);
 
@@ -114,20 +115,20 @@ bool checkConnection()
     h.command = ESP_CONNECTION_TEST;
     h.payloadSize = 0;
 
-    xEventGroupClearBits(wifiEvents, EVENT_CONNECTION);
+    xEventGroupClearBits(wifiEvents, EventConnection);
 
     sendPacket(&h, nullptr);
 
     EventBits_t uxBits =
-        xEventGroupWaitBits(wifiEvents, EVENT_CONNECTION, pdTRUE, pdTRUE, pdMS_TO_TICKS(10));
+        xEventGroupWaitBits(wifiEvents, EventConnection, pdTRUE, pdTRUE, pdMS_TO_TICKS(10));
 
-    return (uxBits & EVENT_CONNECTION);
+    return (uxBits & EventConnection);
 }
 
 // -------------------------------------------------------------------------------------------------
-void receiveData(const uint8_t *data, size_t length)
+void receiveData(const uint8_t *data, uint32_t length)
 {
-    if (bufferPosition + length > RX_PACKET_BUFFER_SIZE)
+    if (bufferPosition + length > RxPacketBufferSize)
     {
         // Remaining data is too large, so we need to clear the entire buffer
         bufferPosition = 0;
@@ -171,11 +172,11 @@ extern "C" void processPacketsTask(void *)
 {
     uint8_t *payload = nullptr;
 
-    while (1)
+    while (true)
     {
         payload = nullptr;
         auto length =
-            xMessageBufferReceive(packetBuffer, packetFrame, RX_PACKET_BUFFER_SIZE, portMAX_DELAY);
+            xMessageBufferReceive(packetBuffer, packetFrame, RxPacketBufferSize, portMAX_DELAY);
 
         if (length == 0)
         {
@@ -199,7 +200,7 @@ extern "C" void processPacketsTask(void *)
             {
             case ESP_CONNECTION_TEST:
                 if (header.status == RESPONSE_OKAY)
-                    xEventGroupSetBits(wifiEvents, EVENT_CONNECTION);
+                    xEventGroupSetBits(wifiEvents, EventConnection);
                 break;
 
             case ESP_GET_MAC_ADDR:
@@ -209,12 +210,12 @@ extern "C" void processPacketsTask(void *)
             }
             continue;
         }
-        
+
         xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
         switch (header.command)
         {
         case LED_SET_ALL:
-            if (header.payloadSize == 4 * (Strip1Pixels + Strip2Pixels + Strip3Pixels))
+            if (header.payloadSize == 4 * TotalPixels)
             {
                 std::memcpy(reinterpret_cast<uint8_t *>(ledTargetData), payload,
                             header.payloadSize);
@@ -242,8 +243,7 @@ extern "C" void processPacketsTask(void *)
             break;
 
         case LED_FADE_HARD:
-            std::memcpy(ledCurrentData, ledTargetData,
-                        (Strip1Pixels + Strip2Pixels + Strip3Pixels) * sizeof(uint32_t));
+            std::memcpy(ledCurrentData, ledTargetData, TotalPixels * sizeof(uint32_t));
             header.status = RESPONSE_OKAY;
             currentLightState = LightState::Custom;
             xTaskNotify(digitalLEDHandle, 1, eSetBits);
@@ -268,13 +268,13 @@ extern "C" void processPacketsTask(void *)
             break;
 
         case LED_ESP_OTA_STARTED:
-            xEventGroupSetBits(wifiEvents, EVENT_OTA_STARTED);
+            xEventGroupSetBits(wifiEvents, EventWifiUpgradeStarted);
             // do not disturb ESP
             continue;
             break;
 
         case LED_ESP_OTA_FINISHED:
-            xEventGroupSetBits(wifiEvents, EVENT_OTA_FINISHED);
+            xEventGroupSetBits(wifiEvents, EventWifiUpgradeFinished);
             continue;
             break;
 
@@ -293,10 +293,7 @@ extern "C" void processPacketsTask(void *)
 // -------------------------------------------------------------------------------------------------
 void initWifi()
 {
-    vTaskDelay(pdMS_TO_TICKS(10));
-    HAL_GPIO_WritePin(ESP_EN_GPIO_Port, ESP_EN_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(ESP_RST_GPIO_Port, ESP_RST_Pin, GPIO_PIN_SET);
-    vTaskDelay(pdMS_TO_TICKS(500));
+    setMode(Wifi::Mode::Normal, true);
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -8,12 +8,13 @@ constexpr auto Strip1Pixels = 47;
 constexpr auto Strip2Pixels = 37;
 constexpr auto Strip3Pixels = 46;
 
-constexpr auto MaximumPixels = std::max(std::max(Strip1Pixels, Strip2Pixels), Strip3Pixels);
+constexpr auto LongestStrip = std::max(std::max(Strip1Pixels, Strip2Pixels), Strip3Pixels);
+constexpr auto TotalPixels = Strip1Pixels + Strip2Pixels + Strip3Pixels;
 
 extern TaskHandle_t digitalLEDHandle;
 extern TaskHandle_t ledFadingHandle;
-extern LEDSegment ledCurrentData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
-extern LEDSegment ledTargetData[Strip1Pixels + Strip2Pixels + Strip3Pixels];
+extern LEDSegment ledCurrentData[TotalPixels];
+extern LEDSegment ledTargetData[TotalPixels];
 
 enum class LightState
 {
