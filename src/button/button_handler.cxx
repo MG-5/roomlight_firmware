@@ -19,14 +19,12 @@ namespace
 constexpr auto ButtonSamplingInterval = 15.0_ms;
 constexpr auto LongPressTime = 500.0_ms;
 
-void buttonCallback(Button::Action action);
-
-Button touchButton{{Touch_GPIO_Port, Touch_Pin}, buttonCallback, LongPressTime};
-
 void buttonCallback(Button::Action action)
 {
     xQueueSend(buttonQueue, &action, 0);
 }
+
+Button touchButton{{Touch_GPIO_Port, Touch_Pin}, buttonCallback, LongPressTime};
 
 } // namespace
 
@@ -44,7 +42,6 @@ extern "C" void buttonUpdateTask(void *)
 
 extern "C" void uiUpdateTask(void *)
 {
-
     while (true)
     {
         Button::Action action;

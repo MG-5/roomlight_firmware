@@ -157,6 +157,8 @@ void receiveData(const uint8_t *data, uint32_t length)
                 bufferPosition -= messageLength;
                 std::memcpy(dataBuffer, dataBuffer + messageLength, bufferPosition);
             }
+
+            xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
         }
         else
         {
@@ -211,7 +213,6 @@ extern "C" void processPacketsTask(void *)
             continue;
         }
 
-        xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
         switch (header.command)
         {
         case LED_SET_ALL:
