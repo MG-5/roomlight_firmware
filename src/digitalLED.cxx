@@ -38,24 +38,13 @@ StatusLed *mosfetLeds[3] = {ledGreen1, ledGreen2, ledGreen3};
 LEDSegment zeroSegment;
 
 // Bit band stuff
-constexpr auto RAM_BASE = 0x20000000;
-constexpr auto RAM_BB_BASE = 0x22000000;
+constexpr intptr_t RamBase = 0x20000000;
+constexpr intptr_t RamBaseBB = 0x22000000;
 
-#define Var_ResetBit_BB(VarAddr, BitNumber)                                                        \
-    (*(volatile uint32_t *)(RAM_BB_BASE | ((VarAddr - RAM_BASE) << 5) | ((BitNumber) << 2)) = 0)
-
-#define Var_SetBit_BB(VarAddr, BitNumber)                                                          \
-    (*(volatile uint32_t *)(RAM_BB_BASE | ((VarAddr - RAM_BASE) << 5) | ((BitNumber) << 2)) = 1)
-
-#define Var_GetBit_BB(VarAddr, BitNumber)                                                          \
-    (*(volatile uint32_t *)(RAM_BB_BASE | ((VarAddr - RAM_BASE) << 5) | ((BitNumber) << 2)))
-
-#define BITBAND_SRAM(address, bit)                                                                 \
-    ((__IO uint32_t *)(RAM_BB_BASE + (((uint32_t)address) - RAM_BASE) * 32 + (bit)*4))
-
-#define varSetBit(var, bit) (Var_SetBit_BB((uint32_t)&var, bit))
-#define varResetBit(var, bit) (Var_ResetBit_BB((uint32_t)&var, bit))
-#define varGetBit(var, bit) (Var_GetBit_BB((uint32_t)&var, bit))
+constexpr auto getBitBandingPointer(uint32_t address, uint8_t bit)
+{
+    return reinterpret_cast<volatile uint32_t *>(RamBaseBB + (address - RamBase) * 32 + bit * 4);
+}
 
 struct digitalLEDBufferItem
 {
@@ -90,7 +79,8 @@ void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8
     uint32_t invWhite = ~white;
 
     // Bitband optimizations with pure increments, 5us interrupts
-    auto *bitBand = BITBAND_SRAM(&DMABitBuffer[(calcRow)], channel);
+    const auto dataAddress = reinterpret_cast<uint32_t>(&DMABitBuffer[(calcRow)]);
+    auto *bitBand = getBitBandingPointer(dataAddress, channel);
 
     // RED
     *bitBand = (invRed >> 7);
@@ -353,10 +343,10 @@ extern "C" void digitalLEDTask(void *)
     ledCurrentData[seg++].green = 1;
     ledCurrentData[seg++].blue = 1;
     ledCurrentData[seg++].white = 1;
-    ledCurrentData[seg++].red = 1;
-    ledCurrentData[seg++].green = 1;
-    ledCurrentData[seg++].blue = 1;
-    ledCurrentData[seg++].white = 1;
+    ledCurrentData[seg++].red = 255;
+    ledCurrentData[seg++].green = 255;
+    ledCurrentData[seg++].blue = 255;
+    ledCurrentData[seg++].white = 255;
 
     HAL_GPIO_WritePin(EN_MOS3_GPIO_Port, EN_MOS3_Pin, GPIO_PIN_SET);
     ledGreen3->mode = StatusLedMode::On;
