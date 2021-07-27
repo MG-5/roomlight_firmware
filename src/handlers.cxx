@@ -89,6 +89,8 @@ extern "C" void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCH
     (void)pxTask;
     (void)pcTaskName;
 
+    volatile auto name = pcTaskName;
+
     while (true)
     {
         ledError.toggle();

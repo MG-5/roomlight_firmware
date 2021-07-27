@@ -167,11 +167,19 @@ void receiveData(const uint8_t *data, uint32_t length)
         }
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+void initWifi()
+{
+    setMode(Wifi::Mode::Normal, true);
+}
+
 } // namespace Wifi
 
 // -------------------------------------------------------------------------------------------------
 extern "C" void processPacketsTask(void *)
 {
+    vTaskSuspend(nullptr);
     uint8_t *payload = nullptr;
 
     while (true)
@@ -292,15 +300,10 @@ extern "C" void processPacketsTask(void *)
 }
 
 // -------------------------------------------------------------------------------------------------
-void initWifi()
-{
-    setMode(Wifi::Mode::Normal, true);
-}
-
-// -------------------------------------------------------------------------------------------------
 extern "C" void wifiDaemonTask(void *)
 {
-    initWifi();
+    vTaskSuspend(nullptr);
+    Wifi::initWifi();
     bool result = false;
 
     while (true)

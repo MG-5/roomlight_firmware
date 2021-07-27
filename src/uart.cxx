@@ -96,12 +96,13 @@ void checkRX()
 
 extern "C" void uartRXTask(void *)
 {
+    vTaskSuspend(nullptr);
     vTaskDelay(pdMS_TO_TICKS(250));
 
     __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
     HAL_UART_Receive_DMA(&huart2, rxBuffer, RX_BUFFER_SIZE);
 
-    while (1)
+    while (true)
     {
         waitForRXComplete();
         checkRX();
@@ -110,7 +111,8 @@ extern "C" void uartRXTask(void *)
 
 extern "C" void uartTXTask(void *)
 {
-    while (1)
+    vTaskSuspend(nullptr);
+    while (true)
     {
         auto messageLength =
             xMessageBufferReceive(txMessageBuffer, sendBuffer, SEND_BUFFER_SIZE, portMAX_DELAY);

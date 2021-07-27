@@ -2,7 +2,7 @@
 
 void Button::update(const units::si::Time timePassed)
 {
-    State state = buttonGpio.read() ? State::NotPressed : State::Pressed;
+    State state = buttonGpio.read() ? State::Pressed : State::NotPressed;
 
     switch (internalState)
     {
