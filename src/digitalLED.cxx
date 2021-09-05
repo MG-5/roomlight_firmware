@@ -16,10 +16,16 @@
 #include <cmath>
 #include <cstring>
 
+extern TaskHandle_t zeroCheckerHandle;
+
 std::array<LEDSegment, TotalPixels> ledCurrentData{};
 std::array<LEDSegment, TotalPixels> ledTargetData{};
 std::array<LEDSegment, TotalPixels> ledTargetData2{};
 LightState currentLightState = LightState::Off;
+
+namespace
+{
+LightState prevLightState = LightState::Off;
 
 struct DiffLEDSegment
 {
@@ -30,7 +36,6 @@ struct DiffLEDSegment
 };
 
 std::array<DiffLEDSegment, TotalPixels> ledDiffData{};
-extern TaskHandle_t zeroCheckerHandle;
 
 bool stripEnabled[NumberOfDataPins];
 
@@ -295,6 +300,15 @@ void checkStripsForColor()
 
     if (!stripEnabled[0] && !stripEnabled[1])
         currentLightState = LightState::Off;
+
+    else if (prevLightState == LightState::Off)
+    {
+        // let led chips some time to start
+        for (int i = 0; i < 750; ++i)
+            asm volatile("nop");
+    }
+
+    prevLightState = currentLightState;
 }
 
 void initDigitalLED()
@@ -321,29 +335,27 @@ void initDigitalLED()
     __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_CC2);
 }
 
+void showTestColors()
+{
+    ledCurrentData[0].red = 255;
+    ledCurrentData[Strip1Pixels - 1].green = 255;
+    ledCurrentData[Strip1Pixels].blue = 255;
+    ledCurrentData[Strip1Pixels + Strip2Pixels - 1].white = 255;
+    ledCurrentData[Strip1Pixels + Strip2Pixels].red = 255;
+    ledCurrentData[TotalPixels - 1].green = 255;
+
+    currentLightState = LightState::Custom;
+
+    checkStripsForColor();
+}
+
+} // namespace
+
 extern "C" void digitalLEDTask(void *)
 {
     initDigitalLED();
 
-    /*
-    uint8_t seg = 84;
-    ledCurrentData[seg++].red = 1;
-    ledCurrentData[seg++].green = 1;
-    ledCurrentData[seg++].blue = 1;
-    ledCurrentData[seg++].white = 1;
-    ledCurrentData[seg++].red = 255;
-    ledCurrentData[seg++].green = 255;
-    ledCurrentData[seg++].blue = 255;
-    ledCurrentData[seg++].white = 255;
-
-    HAL_GPIO_WritePin(EN_MOS3_GPIO_Port, EN_MOS3_Pin, GPIO_PIN_SET);
-    ledGreen3->mode = StatusLedMode::On;
-    stripEnabled[2] = true;
-    */
-
-    // let led chips some time to start
-    for (int i = 0; i < 750; ++i)
-        asm volatile("nop");
+    showTestColors();
 
     auto lastWakeTime = xTaskGetTickCount();
 
@@ -358,10 +370,6 @@ extern "C" void digitalLEDTask(void *)
         {
             // turn on mosfet if needed
             checkStripsForColor();
-
-            // let led chips some time to start
-            for (int i = 0; i < 750; ++i)
-                asm volatile("nop");
         }
     }
 }
