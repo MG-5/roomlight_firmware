@@ -5,6 +5,7 @@
 #include "gpio.h"
 #include "tim.h"
 
+#include "BitBanding.hpp"
 #include "StatusLeds.hpp"
 #include "digitalLED.hpp"
 #include "helpers/freertos.hpp"
@@ -39,15 +40,6 @@ util::Gpio mosfets[3] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
 
 StatusLed *mosfetLeds[3] = {ledGreen1, ledGreen2, ledGreen3};
 LEDSegment zeroSegment;
-
-// Bit band stuff
-constexpr intptr_t RamBase = 0x20000000;
-constexpr intptr_t RamBaseBB = 0x22000000;
-
-constexpr auto getBitBandingPointer(uint32_t address, uint8_t bit)
-{
-    return reinterpret_cast<volatile uint32_t *>(RamBaseBB + (address - RamBase) * 32 + bit * 4);
-}
 
 struct digitalLEDBufferItem
 {
