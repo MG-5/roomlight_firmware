@@ -7,14 +7,17 @@
 
 #include "StatusLeds.hpp"
 #include "digitalLED.hpp"
+#include "helpers/freertos.hpp"
 #include "protocol.hpp"
+#include "units/si/frequency.hpp"
 
 #include <climits>
 #include <cmath>
 #include <cstring>
 
-LEDSegment ledCurrentData[TotalPixels]{};
-LEDSegment ledTargetData[TotalPixels]{};
+std::array<LEDSegment, TotalPixels> ledCurrentData{};
+std::array<LEDSegment, TotalPixels> ledTargetData{};
+std::array<LEDSegment, TotalPixels> ledTargetData2{};
 LightState currentLightState = LightState::Off;
 
 struct DiffLEDSegment
@@ -25,7 +28,7 @@ struct DiffLEDSegment
     int16_t white = 0;
 };
 
-DiffLEDSegment ledDiffData[TotalPixels];
+std::array<DiffLEDSegment, TotalPixels> ledDiffData{};
 extern TaskHandle_t zeroCheckerHandle;
 
 bool stripEnabled[3];
@@ -320,11 +323,11 @@ void checkStripsForColor()
 void initDigitalLED()
 {
     digitalLED.item[0].channel = std::log2(DATA1_Pin);
-    digitalLED.item[0].frameBufferPointer = ledCurrentData;
+    digitalLED.item[0].frameBufferPointer = ledCurrentData.data();
     digitalLED.item[0].frameBufferSize = Strip1Pixels;
 
     digitalLED.item[1].channel = std::log2(DATA2_Pin);
-    digitalLED.item[1].frameBufferPointer = ledCurrentData + Strip1Pixels;
+    digitalLED.item[1].frameBufferPointer = ledCurrentData.data() + Strip1Pixels;
     digitalLED.item[1].frameBufferSize = Strip2Pixels + Strip3Pixels;
 
     // digitalLED.item[2].channel = std::log2(DATA3_Pin);
@@ -393,6 +396,10 @@ extern "C" void digitalLEDTask(void *)
 
 extern "C" void ledFadingTask(void *)
 {
+    constexpr auto FadingTime = 300.0_ms;
+    constexpr auto DelayTime = 8.0_ms;
+    constexpr auto NumberOfSteps = (FadingTime / DelayTime).getMagnitude<uint8_t>();
+
     uint8_t factor;
     bool restart = false;
 
@@ -402,7 +409,7 @@ extern "C" void ledFadingTask(void *)
             xTaskNotifyWait(0, ULONG_MAX, nullptr, portMAX_DELAY);
 
         restart = false;
-        factor = 100;
+        factor = NumberOfSteps - 1;
 
         // calc difference between current and target data
         for (uint32_t i = 0; i < TotalPixels; i++)
@@ -413,22 +420,27 @@ extern "C" void ledFadingTask(void *)
             ledDiffData[i].white = ledCurrentData[i].white - ledTargetData[i].white;
         }
 
+        ledTargetData2 = ledTargetData;
+
         while (true)
         {
             // apply difference multiplied by factor to current data
             for (uint32_t i = 0; i < TotalPixels; i++)
             {
-                ledCurrentData[i].green = static_cast<uint8_t>(
-                    ledTargetData[i].green + (factor * ledDiffData[i].green) / 100); // green
+                ledCurrentData[i].green =
+                    static_cast<uint8_t>(ledTargetData2[i].green +
+                                         (factor * ledDiffData[i].green) / NumberOfSteps); // green
 
                 ledCurrentData[i].red = static_cast<uint8_t>(
-                    ledTargetData[i].red + (factor * ledDiffData[i].red) / 100); // red
+                    ledTargetData2[i].red + (factor * ledDiffData[i].red) / NumberOfSteps); // red
 
-                ledCurrentData[i].blue = static_cast<uint8_t>(
-                    ledTargetData[i].blue + (factor * ledDiffData[i].blue) / 100); // blue
+                ledCurrentData[i].blue =
+                    static_cast<uint8_t>(ledTargetData2[i].blue +
+                                         (factor * ledDiffData[i].blue) / NumberOfSteps); // blue
 
-                ledCurrentData[i].white = static_cast<uint8_t>(
-                    ledTargetData[i].white + (factor * ledDiffData[i].white) / 100); // white
+                ledCurrentData[i].white =
+                    static_cast<uint8_t>(ledTargetData2[i].white +
+                                         (factor * ledDiffData[i].white) / NumberOfSteps); // white
             }
 
             // trigger task to render led data
@@ -437,10 +449,10 @@ extern "C" void ledFadingTask(void *)
             if (factor == 0)
                 break;
 
-            factor -= 2;
+            factor--;
 
             uint32_t notifiedValue;
-            xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(8));
+            xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, toOsTicks(DelayTime));
             if ((notifiedValue & 0x01U) != 0)
             {
                 // restart fading
@@ -457,10 +469,12 @@ extern "C" void ledFadingTask(void *)
 
 extern "C" void zeroCheckerTask(void *)
 {
+    constexpr auto TaskDelay = 5.0_s;
+
     while (true)
     {
         uint32_t notifiedValue;
-        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5000));
+        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, toOsTicks(TaskDelay));
 
         checkStripsForColor();
     }
