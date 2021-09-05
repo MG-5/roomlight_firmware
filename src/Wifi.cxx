@@ -226,7 +226,7 @@ extern "C" void processPacketsTask(void *)
         case LED_SET_ALL:
             if (header.payloadSize == 4 * TotalPixels)
             {
-                std::memcpy(reinterpret_cast<uint8_t *>(ledTargetData), payload,
+                std::memcpy(reinterpret_cast<uint8_t *>(ledTargetData.data()), payload,
                             header.payloadSize);
                 header.status = RESPONSE_OKAY;
             }
@@ -252,7 +252,8 @@ extern "C" void processPacketsTask(void *)
             break;
 
         case LED_FADE_HARD:
-            std::memcpy(ledCurrentData, ledTargetData, TotalPixels * sizeof(uint32_t));
+            std::memcpy(ledCurrentData.data(), ledTargetData.data(),
+                        TotalPixels * sizeof(uint32_t));
             header.status = RESPONSE_OKAY;
             currentLightState = LightState::Custom;
             xTaskNotify(digitalLEDHandle, 1, eSetBits);

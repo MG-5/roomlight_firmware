@@ -184,10 +184,10 @@ void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8
 
 void loadNextFramebufferData(digitalLEDBufferItem *bItem, uint32_t row, bool reverse)
 {
-    uint32_t r = bItem->frameBufferPointer[bItem->frameBufferCounter].red;
-    uint32_t g = bItem->frameBufferPointer[bItem->frameBufferCounter].green;
-    uint32_t b = bItem->frameBufferPointer[bItem->frameBufferCounter].blue;
-    uint32_t w = bItem->frameBufferPointer[bItem->frameBufferCounter].white;
+    uint32_t r = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].red];
+    uint32_t g = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].green];
+    uint32_t b = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].blue];
+    uint32_t w = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].white];
 
     if (reverse)
     {
@@ -408,21 +408,17 @@ extern "C" void ledFadingTask(void *)
             // apply difference multiplied by factor to current data
             for (uint32_t i = 0; i < TotalPixels; i++)
             {
-                ledCurrentData[i].green =
-                    GammaLUT[ledTargetData2[i].green +
-                             (factor * ledDiffData[i].green) / NumberOfSteps]; // green
+                ledCurrentData[i].green = ledTargetData2[i].green +
+                                          (factor * ledDiffData[i].green) / NumberOfSteps; // green
 
                 ledCurrentData[i].red =
-                    GammaLUT[ledTargetData2[i].red +
-                             (factor * ledDiffData[i].red) / NumberOfSteps]; // red
+                    ledTargetData2[i].red + (factor * ledDiffData[i].red) / NumberOfSteps; // red
 
                 ledCurrentData[i].blue =
-                    GammaLUT[ledTargetData2[i].blue +
-                             (factor * ledDiffData[i].blue) / NumberOfSteps]; // blue
+                    ledTargetData2[i].blue + (factor * ledDiffData[i].blue) / NumberOfSteps; // blue
 
-                ledCurrentData[i].white =
-                    GammaLUT[ledTargetData2[i].white +
-                             (factor * ledDiffData[i].white) / NumberOfSteps]; // white
+                ledCurrentData[i].white = ledTargetData2[i].white +
+                                          (factor * ledDiffData[i].white) / NumberOfSteps; // white
             }
 
             // trigger task to render led data

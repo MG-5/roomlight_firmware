@@ -63,12 +63,12 @@ extern "C" void uiUpdateTask(void *)
 
             case LightState::FullWhite:
                 currentLightState = LightState::MediumWhite;
-                seg.white = 32;
+                seg.white = 128;
                 break;
 
             case LightState::MediumWhite:
                 currentLightState = LightState::LowWhite;
-                seg.white = 8;
+                seg.white = 64;
                 break;
 
             case LightState::LowWhite:
