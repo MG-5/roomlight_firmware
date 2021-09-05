@@ -8,6 +8,7 @@
 #include "BitBanding.hpp"
 #include "StatusLeds.hpp"
 #include "digitalLED.hpp"
+#include "gamma/GammaLUT.hpp"
 #include "helpers/freertos.hpp"
 #include "protocol.hpp"
 #include "units/si/frequency.hpp"
@@ -408,19 +409,20 @@ extern "C" void ledFadingTask(void *)
             for (uint32_t i = 0; i < TotalPixels; i++)
             {
                 ledCurrentData[i].green =
-                    static_cast<uint8_t>(ledTargetData2[i].green +
-                                         (factor * ledDiffData[i].green) / NumberOfSteps); // green
+                    GammaLUT[ledTargetData2[i].green +
+                             (factor * ledDiffData[i].green) / NumberOfSteps]; // green
 
-                ledCurrentData[i].red = static_cast<uint8_t>(
-                    ledTargetData2[i].red + (factor * ledDiffData[i].red) / NumberOfSteps); // red
+                ledCurrentData[i].red =
+                    GammaLUT[ledTargetData2[i].red +
+                             (factor * ledDiffData[i].red) / NumberOfSteps]; // red
 
                 ledCurrentData[i].blue =
-                    static_cast<uint8_t>(ledTargetData2[i].blue +
-                                         (factor * ledDiffData[i].blue) / NumberOfSteps); // blue
+                    GammaLUT[ledTargetData2[i].blue +
+                             (factor * ledDiffData[i].blue) / NumberOfSteps]; // blue
 
                 ledCurrentData[i].white =
-                    static_cast<uint8_t>(ledTargetData2[i].white +
-                                         (factor * ledDiffData[i].white) / NumberOfSteps); // white
+                    GammaLUT[ledTargetData2[i].white +
+                             (factor * ledDiffData[i].white) / NumberOfSteps]; // white
             }
 
             // trigger task to render led data

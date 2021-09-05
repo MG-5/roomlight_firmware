@@ -13,6 +13,7 @@
                 "${workspaceFolder}/cubemx/Drivers/CMSIS/Device/ST/STM32F1xx/Include",
                 "${workspaceFolder}/cubemx/Drivers/CMSIS/Include",
                 "${workspaceFolder}/src",
+                "${workspaceFolder}/src/gamma/",
                 "${workspaceFolder}/src/util/include"
             ],
             "defines": [

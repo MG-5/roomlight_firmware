@@ -4,6 +4,7 @@ DEVICE	:= stm32f103cb
 
 INCDIRS			:=  \
 src                 \
+src/gamma/          \
 src/util/include
 
 SOURCES :=                      \

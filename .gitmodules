@@ -1,3 +1,6 @@
 [submodule "src/util"]
 	path = src/util
 	url = git@ottocar.cs.ovgu.de:ottocar/Firmware/generation/util.git
+[submodule "src/gamma/gcem"]
+	path = src/gamma/gcem
+	url = https://github.com/kthohr/gcem.git
