@@ -9,6 +9,8 @@ constexpr auto Strip1Pixels = 47;
 constexpr auto Strip2Pixels = 37;
 constexpr auto Strip3Pixels = 46;
 
+constexpr auto NumberOfDataPins = 2;
+
 constexpr auto LongestStrip =
     Strip2Pixels + Strip3Pixels; // std::max(std::max(Strip1Pixels, Strip2Pixels), Strip3Pixels);
 constexpr auto TotalPixels = Strip1Pixels + Strip2Pixels + Strip3Pixels;

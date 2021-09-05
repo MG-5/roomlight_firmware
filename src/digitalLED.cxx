@@ -32,13 +32,11 @@ struct DiffLEDSegment
 std::array<DiffLEDSegment, TotalPixels> ledDiffData{};
 extern TaskHandle_t zeroCheckerHandle;
 
-bool stripEnabled[3];
+bool stripEnabled[NumberOfDataPins];
 
-util::Gpio mosfets[3] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
-                         {EN_MOS2_GPIO_Port, EN_MOS2_Pin},
-                         {EN_MOS3_GPIO_Port, EN_MOS3_Pin}};
-
-StatusLed *mosfetLeds[3] = {ledGreen1, ledGreen2, ledGreen3};
+util::Gpio mosfets[NumberOfDataPins] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
+                                        {EN_MOS2_GPIO_Port, EN_MOS2_Pin}};
+StatusLed *mosfetLeds[NumberOfDataPins]{ledGreen1, ledGreen2};
 LEDSegment zeroSegment;
 
 struct digitalLEDBufferItem
@@ -51,7 +49,7 @@ struct digitalLEDBufferItem
 
 struct digitalLEDStruct
 {
-    digitalLEDBufferItem item[3];
+    digitalLEDBufferItem item[NumberOfDataPins];
     uint32_t repeatCounter;
 };
 
@@ -62,7 +60,7 @@ constexpr auto DMABitBufferSize = 32 * 2;
 uint16_t DMABitBuffer[DMABitBufferSize];
 
 // Define source arrays with output pins
-constexpr uint32_t dLED_IOs[] = {DATA1_Pin | DATA2_Pin | DATA3_Pin};
+constexpr uint32_t dLED_IOs[] = {DATA1_Pin | DATA2_Pin};
 
 void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8_t green,
                       uint8_t blue, uint8_t white)
@@ -209,7 +207,6 @@ void transferHalfHandler(DMA_HandleTypeDef *hdma)
 {
     loadNextFramebufferData(&digitalLED.item[0], 0, true);
     loadNextFramebufferData(&digitalLED.item[1], 0, false);
-    // loadNextFramebufferData(&digitalLED.item[2], 0, false);
 }
 
 void transferCompleteHandler(DMA_HandleTypeDef *hdma)
@@ -244,7 +241,6 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
         // Load bitbuffer with next RGB LED values
         loadNextFramebufferData(&digitalLED.item[0], 1, true);
         loadNextFramebufferData(&digitalLED.item[1], 1, false);
-        // loadNextFramebufferData(&digitalLED.item[2], 1, false);
     }
 }
 
@@ -255,15 +251,10 @@ void sendBuffer()
     loadNextFramebufferData(&digitalLED.item[0], 0, true);
     loadNextFramebufferData(&digitalLED.item[0], 1, true);
 
-    // 38 segments
+    // 37 + 46 segments
     digitalLED.item[1].frameBufferCounter = 0;
     loadNextFramebufferData(&digitalLED.item[1], 0, false);
     loadNextFramebufferData(&digitalLED.item[1], 1, false);
-
-    // 46 Segments
-    // digitalLED.item[2].frameBufferCounter = 0;
-    // loadNextFramebufferData(&digitalLED.item[2], 0, false);
-    // loadNextFramebufferData(&digitalLED.item[2], 1, false);
 
     // start TIM2
     __HAL_TIM_SetCounter(&htim1, htim1.Init.Period - 1);
@@ -291,24 +282,18 @@ bool isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
 
 void checkStripsForColor()
 {
-    if (stripEnabled[0])
-        stripEnabled[0] = isColorDataAvailable(0, Strip1Pixels - 1);
+    stripEnabled[0] = isColorDataAvailable(0, Strip1Pixels - 1);
 
-    if (stripEnabled[1])
-        stripEnabled[1] =
-            isColorDataAvailable(Strip1Pixels, Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
+    stripEnabled[1] =
+        isColorDataAvailable(Strip1Pixels, Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
 
-    // if (stripEnabled[2])
-    //    stripEnabled[2] = isColorDataAvailable(Strip1Pixels + Strip2Pixels,
-    //                                           Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
-
-    for (auto i = 0; i < 2; i++)
+    for (auto i = 0; i < NumberOfDataPins; i++)
     {
         mosfets[i].write(stripEnabled[i]);
         mosfetLeds[i]->mode = stripEnabled[i] ? StatusLedMode::On : StatusLedMode::Off;
     }
 
-    if (!stripEnabled[0] && !stripEnabled[1] && !stripEnabled[2])
+    if (!stripEnabled[0] && !stripEnabled[1])
         currentLightState = LightState::Off;
 }
 
@@ -321,10 +306,6 @@ void initDigitalLED()
     digitalLED.item[1].channel = std::log2(DATA2_Pin);
     digitalLED.item[1].frameBufferPointer = ledCurrentData.data() + Strip1Pixels;
     digitalLED.item[1].frameBufferSize = Strip2Pixels + Strip3Pixels;
-
-    // digitalLED.item[2].channel = std::log2(DATA3_Pin);
-    // digitalLED.item[2].frameBufferPointer = ledCurrentData + Strip1Pixels + Strip2Pixels;
-    // digitalLED.item[2].frameBufferSize = Strip3Pixels;
 
     HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_HALFCPLT_CB_ID, transferHalfHandler);
     HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_CPLT_CB_ID, transferCompleteHandler);
@@ -376,7 +357,6 @@ extern "C" void digitalLEDTask(void *)
         if ((notifiedValue & 0x01U) != 0)
         {
             // turn on mosfet if needed
-            stripEnabled[0] = stripEnabled[1] = stripEnabled[2] = true;
             checkStripsForColor();
 
             // let led chips some time to start
