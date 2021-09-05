@@ -221,7 +221,17 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
 {
     digitalLED.repeatCounter++;
 
-    if (digitalLED.repeatCounter == LongestStrip / 2)
+    constexpr auto MaxLeds = []() -> auto
+    {
+        if constexpr (LongestStrip % 2 == 0)
+            return LongestStrip / 2;
+
+        else
+            return (LongestStrip / 2) + 1;
+    }
+    ();
+
+    if (digitalLED.repeatCounter == MaxLeds)
     {
         digitalLED.repeatCounter = 0;
 
