@@ -17,16 +17,16 @@
 #include <cmath>
 #include <cstring>
 
-extern TaskHandle_t zeroCheckerHandle;
-
 std::array<LEDSegment, TotalPixels> ledCurrentData{};
 std::array<LEDSegment, TotalPixels> ledTargetData{};
 std::array<LEDSegment, TotalPixels> ledTargetData2{};
 LightState currentLightState = LightState::Off;
+LightMode currentLightMode = LightMode::BothStrips;
 
 namespace
 {
-LightState prevLightState = LightState::Off;
+LightState prevLightState = currentLightState;
+LightMode prevLightMode = currentLightMode;
 
 struct DiffLEDSegment
 {
@@ -290,8 +290,11 @@ void checkStripsForColor()
 {
     stripEnabled[0] = isColorDataAvailable(0, Strip1Pixels - 1);
 
-    stripEnabled[1] =
-        isColorDataAvailable(Strip1Pixels, Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
+    if (currentLightMode == LightMode::BothStrips || currentLightState == LightState::Custom)
+        stripEnabled[1] =
+            isColorDataAvailable(Strip1Pixels, Strip1Pixels + Strip2Pixels + Strip3Pixels - 1);
+    else
+        stripEnabled[1] = false;
 
     for (auto i = 0; i < NumberOfDataPins; i++)
     {
@@ -302,7 +305,8 @@ void checkStripsForColor()
     if (!stripEnabled[0] && !stripEnabled[1])
         currentLightState = LightState::Off;
 
-    else if (prevLightState == LightState::Off)
+    else if (prevLightState == LightState::Off ||
+             (currentLightMode == LightMode::BothStrips && prevLightMode == LightMode::OnlyStrip1))
     {
         // let led chips some time to start
         for (int i = 0; i < 750; ++i)
@@ -310,6 +314,7 @@ void checkStripsForColor()
     }
 
     prevLightState = currentLightState;
+    prevLightMode = currentLightMode;
 }
 
 void initDigitalLED()

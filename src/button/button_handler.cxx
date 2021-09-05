@@ -58,6 +58,7 @@ extern "C" void uiUpdateTask(void *)
             {
             case LightState::Off:
                 currentLightState = LightState::FullWhite;
+                currentLightMode = LightMode::BothStrips;
                 seg.white = 255;
                 break;
 
@@ -95,6 +96,20 @@ extern "C" void uiUpdateTask(void *)
         break;
 
         case Button::Action::LongPress:
+        {
+            if (currentLightMode == LightMode::BothStrips)
+            {
+                currentLightMode = LightMode::OnlyStrip1;
+                xTaskNotify(zeroCheckerHandle, 1, eSetBits);
+            }
+            else
+            {
+                currentLightMode = LightMode::BothStrips;
+                xTaskNotify(digitalLEDHandle, 1, eSetBits);
+            }
+        }
+        break;
+
         case Button::Action::StopLongPress:
             break;
         }
