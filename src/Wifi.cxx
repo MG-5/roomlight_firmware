@@ -34,10 +34,16 @@ uint8_t finalFrame[TxPacketBufferSize];
 
 // RX
 size_t bufferPosition = 0;
-constexpr auto RxPacketBufferSize = 512 + 32;
-uint8_t dataBuffer[RxPacketBufferSize];
-uint8_t packetFrame[RxPacketBufferSize];
-auto packetBuffer = xMessageBufferCreate(1024 + 512);
+constexpr auto RxDataBufferSize = 1024;
+uint8_t rxDataBuffer[RxDataBufferSize];
+
+constexpr auto PacketFrameSize = 512 + 64;
+uint8_t packetFrame[PacketFrameSize];
+
+constexpr auto PacketBufferSize = 1024 + 128;
+auto packetBuffer = xMessageBufferCreate(PacketBufferSize);
+
+constexpr auto MaximumPayloadSize = sizeof(LEDSegment) * TotalPixels;
 
 util::Gpio espGpio0{ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin};
 util::Gpio espEnable{ESP_EN_GPIO_Port, ESP_EN_Pin};
@@ -128,44 +134,63 @@ bool checkConnection()
 // -------------------------------------------------------------------------------------------------
 void receiveData(const uint8_t *data, uint32_t length)
 {
-    if (bufferPosition + length > RxPacketBufferSize)
+    if (bufferPosition + length > RxDataBufferSize)
     {
         // Remaining data is too large, so we need to clear the entire buffer
         bufferPosition = 0;
         return;
     }
 
-    std::memcpy(dataBuffer + bufferPosition, data, length);
+    std::memcpy(rxDataBuffer + bufferPosition, data, length);
     bufferPosition += length;
 
-    if (bufferPosition >= sizeof(PacketHeader))
+    while (true)
     {
-        PacketHeader header;
-        std::memcpy(&header, dataBuffer, sizeof(header));
-        if (header.magic == PROTOCOL_MAGIC)
-        {
-            auto messageLength = sizeof(header) + header.payloadSize;
-            if (messageLength == bufferPosition)
-            {
-                xMessageBufferSend(packetBuffer, dataBuffer, messageLength, 0);
-                bufferPosition = 0;
-            }
-            else if (messageLength < bufferPosition)
-            {
-                // more than one packet available - split it
-                xMessageBufferSend(packetBuffer, dataBuffer, messageLength, 0);
-                bufferPosition -= messageLength;
-                std::memcpy(dataBuffer, dataBuffer + messageLength, bufferPosition);
-            }
+        if (bufferPosition < sizeof(PacketHeader))
+            return;
 
-            xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
-        }
-        else
+        auto header = reinterpret_cast<const PacketHeader *>(rxDataBuffer);
+        if (header->magic != PROTOCOL_MAGIC)
         {
             // invalid packet - reset buffer
             bufferPosition = 0;
+            return;
+        }
+
+        if (header->payloadSize > MaximumPayloadSize)
+        {
+            bufferPosition = 0;
+            return;
+        }
+
+        auto messageLength = sizeof(PacketHeader) + header->payloadSize;
+
+        if (messageLength > bufferPosition)
+            return;
+
+        if (messageLength < bufferPosition)
+        {
+            // more than one packet available - split it
+            xMessageBufferSend(packetBuffer, rxDataBuffer, messageLength, 0);
+            bufferPosition -= messageLength;
+
+            if (bufferPosition >= sizeof(PacketHeader))
+            {
+                PacketHeader header;
+                std::memcpy(&header, rxDataBuffer + messageLength, sizeof(PacketHeader));
+            }
+
+            std::memcpy(rxDataBuffer, rxDataBuffer + messageLength, bufferPosition);
+        }
+        else if (messageLength == bufferPosition)
+        {
+            xMessageBufferSend(packetBuffer, rxDataBuffer, messageLength, 0);
+            bufferPosition = 0;
+            return;
         }
     }
+
+    xTaskNotify(wifiDaemonHandle, 1, eSetBits); // trigger wifi alive event
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -186,7 +211,7 @@ extern "C" void processPacketsTask(void *)
     {
         payload = nullptr;
         auto length =
-            xMessageBufferReceive(packetBuffer, packetFrame, RxPacketBufferSize, portMAX_DELAY);
+            xMessageBufferReceive(packetBuffer, packetFrame, PacketFrameSize, portMAX_DELAY);
 
         if (length == 0)
         {
@@ -261,14 +286,14 @@ extern "C" void processPacketsTask(void *)
 
         case LED_GET_CURRENT:
             header.status = RESPONSE_OKAY;
-            header.payloadSize = 2;
+            header.payloadSize = sizeof(ledCurrent);
             Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledCurrent));
             continue;
             break;
 
         case LED_GET_VOLTAGE:
             header.status = RESPONSE_OKAY;
-            header.payloadSize = 2;
+            header.payloadSize = sizeof(ledVoltage);
             Wifi::sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledVoltage));
             continue;
             break;

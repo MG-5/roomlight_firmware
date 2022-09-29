@@ -7,17 +7,18 @@
 #include "Wifi.hpp"
 #include "main.h"
 #include <array>
+#include <cstring>
 
 extern osThreadId uartRXHandle;
 extern osThreadId uartTXHandle;
 
-constexpr auto MSG_BUFFER_SIZE = 128;
-constexpr auto SEND_BUFFER_SIZE = 32;
-constexpr auto RX_BUFFER_SIZE = 512 + 128;
+constexpr auto TxMessageBufferSize = 64;
+constexpr auto SendBufferSize = 32;
+constexpr auto RxBufferSize = 256;
 
-auto txMessageBuffer = xMessageBufferCreate(MSG_BUFFER_SIZE);
-uint8_t sendBuffer[SEND_BUFFER_SIZE];
-uint8_t rxBuffer[RX_BUFFER_SIZE];
+auto txMessageBuffer = xMessageBufferCreate(TxMessageBufferSize);
+uint8_t sendBuffer[SendBufferSize];
+uint8_t rxBuffer[RxBufferSize];
 
 void uartSendData(const uint8_t *data, size_t length)
 {
@@ -65,30 +66,32 @@ void waitForTXComplete()
 void checkRX()
 {
     static size_t previousBufferPosition = 0;
-    size_t bufferPosition = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(huart2.hdmarx);
+    volatile auto dmaCounter = __HAL_DMA_GET_COUNTER(huart2.hdmarx);
+    size_t bufferPosition = RxBufferSize - dmaCounter;
 
-    if (bufferPosition != previousBufferPosition)
+    if (bufferPosition == previousBufferPosition)
+        return;
+
+    if (bufferPosition > previousBufferPosition)
     {
-        if (bufferPosition > previousBufferPosition)
-        {
-            Wifi::receiveData(rxBuffer + previousBufferPosition,
-                              bufferPosition - previousBufferPosition);
-        }
-        else
-        {
-            Wifi::receiveData(rxBuffer + previousBufferPosition,
-                              RX_BUFFER_SIZE - previousBufferPosition);
+        Wifi::receiveData(rxBuffer + previousBufferPosition,
+                          bufferPosition - previousBufferPosition);
+    }
+    else
+    {
 
-            if (bufferPosition > 0)
-            {
-                Wifi::receiveData(rxBuffer, bufferPosition);
-            }
+        Wifi::receiveData(rxBuffer + previousBufferPosition, RxBufferSize - previousBufferPosition);
+
+        if (bufferPosition > 0)
+        {
+
+            Wifi::receiveData(rxBuffer, bufferPosition);
         }
     }
 
     previousBufferPosition = bufferPosition;
 
-    if (previousBufferPosition == RX_BUFFER_SIZE)
+    if (previousBufferPosition == RxBufferSize)
     {
         previousBufferPosition = 0;
     }
@@ -100,7 +103,7 @@ extern "C" void uartRXTask(void *)
     vTaskDelay(pdMS_TO_TICKS(250));
 
     __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
-    HAL_UART_Receive_DMA(&huart2, rxBuffer, RX_BUFFER_SIZE);
+    HAL_UART_Receive_DMA(&huart2, rxBuffer, RxBufferSize);
 
     while (true)
     {
@@ -115,7 +118,7 @@ extern "C" void uartTXTask(void *)
     while (true)
     {
         auto messageLength =
-            xMessageBufferReceive(txMessageBuffer, sendBuffer, SEND_BUFFER_SIZE, portMAX_DELAY);
+            xMessageBufferReceive(txMessageBuffer, sendBuffer, SendBufferSize, portMAX_DELAY);
 
         if (messageLength == 0)
         {

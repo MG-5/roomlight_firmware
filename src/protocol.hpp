@@ -42,7 +42,7 @@
 #define LED_PCB                     0x05
 // clang-format on
 
-constexpr auto PROTOCOL_MAGIC = 0x42;
+constexpr auto PROTOCOL_MAGIC = 0xD7;
 
 // packet header
 struct PacketHeader
