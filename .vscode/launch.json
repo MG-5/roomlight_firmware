@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug (ST-LINK)",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/build/debug/roomlightV2.elf",
+            "executable": "${workspaceFolder}/build/${workspaceFolderBasename}.elf",
             "servertype": "stutil",
             "device": "STM32F103CB",
             "runToMain": true

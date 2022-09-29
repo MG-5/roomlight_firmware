@@ -3,13 +3,9 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "type": "shell",
-    "command": "ninja",
-    "options": {
-        "cwd": "${workspaceFolder}/build"
-    },
+    "command": "make",
     "args": [
-        "${workspaceFolderBasename}",
-        "-j12"
+        "-j8"
     ],
     "presentation": {
         "echo": true,
