@@ -11,16 +11,17 @@ public:
     BinarySemaphore();
     ~BinarySemaphore();
 
-    BinarySemaphore(const BinarySemaphore & other) = delete;
-    BinarySemaphore(BinarySemaphore && other) noexcept;
-    BinarySemaphore &operator=(const BinarySemaphore & other) = delete;
-    BinarySemaphore &operator= (BinarySemaphore && other) noexcept;
+    BinarySemaphore(const BinarySemaphore &other) = delete;
+    BinarySemaphore(BinarySemaphore &&other) noexcept;
+    BinarySemaphore &operator=(const BinarySemaphore &other) = delete;
+    BinarySemaphore &operator=(BinarySemaphore &&other) noexcept;
 
     BaseType_t take(TickType_t blocktime);
-    BaseType_t giveFromISR(BaseType_t* pxHigherPriorityTaskWoken);
+    BaseType_t giveFromISR(BaseType_t *pxHigherPriorityTaskWoken);
     BaseType_t give();
+
 private:
-    SemaphoreHandle_t handle{nullptr};
+    SemaphoreHandle_t semaphoreHandle{nullptr};
 };
 
-} // namespace drive_controller::wrapper
+} // namespace util::wrappers

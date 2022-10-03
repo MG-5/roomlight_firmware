@@ -24,6 +24,6 @@ public:
     void unlock() override;
 
 private:
-    SemaphoreHandle_t m_mutex{nullptr};
+    SemaphoreHandle_t mutexHandle;
 };
 } // namespace util::wrappers

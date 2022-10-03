@@ -4,32 +4,32 @@
 
 namespace util::wrappers
 {
-Mutex::Mutex() : m_mutex(xSemaphoreCreateMutex())
+Mutex::Mutex() : mutexHandle(xSemaphoreCreateMutex())
 {
-    SafeAssert(m_mutex != nullptr);
+    SafeAssert(mutexHandle != nullptr);
 }
 
 Mutex::~Mutex()
 {
-    if (m_mutex != nullptr)
+    if (mutexHandle != nullptr)
     {
-        vSemaphoreDelete(m_mutex);
+        vSemaphoreDelete(mutexHandle);
     }
 }
 
 void Mutex::lock()
 {
-    xSemaphoreTake(m_mutex, portMAX_DELAY);
+    xSemaphoreTake(mutexHandle, portMAX_DELAY);
 }
 
 bool Mutex::lockWithTimeout(const TickType_t timeToWait)
 {
-    return xSemaphoreTake(m_mutex, timeToWait) == pdPASS;
+    return xSemaphoreTake(mutexHandle, timeToWait) == pdPASS;
 }
 
 void Mutex::unlock()
 {
-    xSemaphoreGive(m_mutex);
+    xSemaphoreGive(mutexHandle);
 }
 
 Mutex::Mutex(Mutex &&other) noexcept
@@ -39,7 +39,7 @@ Mutex::Mutex(Mutex &&other) noexcept
 
 Mutex &Mutex::operator=(Mutex &&other) noexcept
 {
-    m_mutex = std::exchange(other.m_mutex, nullptr);
+    mutexHandle = std::exchange(other.mutexHandle, nullptr);
     return *this;
 }
 

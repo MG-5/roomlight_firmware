@@ -5,32 +5,32 @@
 namespace util::wrappers
 {
 
-BinarySemaphore::BinarySemaphore() : handle(xSemaphoreCreateBinary())
+BinarySemaphore::BinarySemaphore() : semaphoreHandle(xSemaphoreCreateBinary())
 {
-    SafeAssert(handle != nullptr);
+    SafeAssert(semaphoreHandle != nullptr);
 }
 
 BinarySemaphore::~BinarySemaphore()
 {
-    if (handle != nullptr)
+    if (semaphoreHandle != nullptr)
     {
-        vSemaphoreDelete(handle);
+        vSemaphoreDelete(semaphoreHandle);
     }
 }
 
 BaseType_t BinarySemaphore::take(const TickType_t blocktime)
 {
-    return xSemaphoreTake(handle, blocktime);
+    return xSemaphoreTake(semaphoreHandle, blocktime);
 }
 
-BaseType_t BinarySemaphore::giveFromISR(BaseType_t* pxHigherPriorityTaskWoken)
+BaseType_t BinarySemaphore::giveFromISR(BaseType_t *pxHigherPriorityTaskWoken)
 {
-    return xSemaphoreGiveFromISR(handle, pxHigherPriorityTaskWoken);
+    return xSemaphoreGiveFromISR(semaphoreHandle, pxHigherPriorityTaskWoken);
 }
 
 BaseType_t BinarySemaphore::give()
 {
-    return xSemaphoreGive(handle);
+    return xSemaphoreGive(semaphoreHandle);
 }
 
 BinarySemaphore::BinarySemaphore(BinarySemaphore &&other) noexcept
@@ -40,8 +40,8 @@ BinarySemaphore::BinarySemaphore(BinarySemaphore &&other) noexcept
 
 BinarySemaphore &BinarySemaphore::operator=(BinarySemaphore &&other) noexcept
 {
-    handle = std::exchange(other.handle, nullptr);
+    semaphoreHandle = std::exchange(other.semaphoreHandle, nullptr);
     return *this;
 }
 
-} // namespace drive_controller::wrapper
+} // namespace util::wrappers

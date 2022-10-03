@@ -14,19 +14,19 @@ EventGroupHandle_t Task::syncEventGroup = xEventGroupCreate();
 
 Task::Task(TaskFunction_t taskCode, const char *name, uint16_t stackDepth, void *parameter,
            UBaseType_t priority)
-    : IFreeRTOSTask(name, stackDepth, priority), _taskCode(taskCode), _parameter(parameter)
+    : IFreeRTOSTask(name, stackDepth, priority), taskCode(taskCode), taskParameter(parameter)
 {
     SafeAssert(taskCode != nullptr);
     xTaskCreate(&Task::taskMain, name, stackDepth, reinterpret_cast<void *>(this), priority,
-                &_handle);
-    SafeAssert(_handle != nullptr);
+                &taskHandle);
+    SafeAssert(taskHandle != nullptr);
 
-    registerTask(_handle);
+    registerTask(taskHandle);
 }
 
 void Task::registerTask(TaskHandle_t handle)
 {
-    if constexpr (core::BuildConfiguration::IsEmbeddedBuild)
+    if constexpr (core::BuildConfiguration::isEmbeddedBuild)
     {
 
         if (taskListIndex == 0)
@@ -47,14 +47,14 @@ int32_t Task::notifyWait(const uint32_t ulBitsToClearOnEntry, const uint32_t ulB
 
 int32_t Task::notify(const uint32_t ulValue, const NotifyAction eAction)
 {
-    return xTaskNotify(_handle, ulValue, notifyActionConverter(eAction));
+    return xTaskNotify(taskHandle, ulValue, notifyActionConverter(eAction));
 }
 
 int32_t Task::notifyFromISR(const uint32_t ulValue, const NotifyAction eAction,
                             int32_t *pxHigherPriorityTaskWoken)
 {
-#if IS_EMBEDDED_BUILD()
-    return xTaskNotifyFromISR(_handle, ulValue, notifyActionConverter(eAction),
+#if OTTOCAR_IS_EMBEDDED_BUILD()
+    return xTaskNotifyFromISR(taskHandle, ulValue, notifyActionConverter(eAction),
                               pxHigherPriorityTaskWoken);
 #else
     return 0;
@@ -63,9 +63,9 @@ int32_t Task::notifyFromISR(const uint32_t ulValue, const NotifyAction eAction,
 
 Task::~Task()
 {
-    if (_handle != nullptr)
+    if (taskHandle != nullptr)
     {
-        vTaskDelete(_handle);
+        vTaskDelete(taskHandle);
     }
 }
 
@@ -73,7 +73,7 @@ Task::~Task()
 {
     Task *task = reinterpret_cast<Task *>(instance);
     xEventGroupWaitBits(syncEventGroup, AllTasksWaitFlag, pdFALSE, pdFALSE, portMAX_DELAY);
-    task->_taskCode(task->_parameter);
+    task->taskCode(task->taskParameter);
     for (;;)
     {
         vTaskDelay(portMAX_DELAY);
@@ -82,7 +82,7 @@ Task::~Task()
 
 void Task::notifyGive()
 {
-    xTaskNotifyGive(_handle);
+    xTaskNotifyGive(taskHandle);
 }
 
 void Task::notifyTake(const uint32_t waittime)
@@ -99,17 +99,21 @@ constexpr eNotifyAction Task::notifyActionConverter(const NotifyAction action)
 {
     switch (action)
     {
-        case NotifyAction::NoAction:
-            return eNotifyAction::eNoAction;
-        case NotifyAction::SetBits:
-            return eNotifyAction::eSetBits;
-        case NotifyAction::Increment:
-            return eNotifyAction::eIncrement;
-        case NotifyAction::SetValueWithOverwrite:
-            return eNotifyAction::eSetValueWithOverwrite;
-        default:
-        case NotifyAction::SetValueWithoutOverwrite:
-            return eNotifyAction::eSetValueWithoutOverwrite;
+    case NotifyAction::NoAction:
+        return eNotifyAction::eNoAction;
+
+    case NotifyAction::SetBits:
+        return eNotifyAction::eSetBits;
+
+    case NotifyAction::Increment:
+        return eNotifyAction::eIncrement;
+
+    case NotifyAction::SetValueWithOverwrite:
+        return eNotifyAction::eSetValueWithOverwrite;
+
+    default:
+    case NotifyAction::SetValueWithoutOverwrite:
+        return eNotifyAction::eSetValueWithoutOverwrite;
     }
 }
 
@@ -126,9 +130,9 @@ Task::Task(Task &&other) noexcept
 
 Task &Task::operator=(Task &&other) noexcept
 {
-    _handle = std::exchange(other._handle, nullptr);
-    _taskCode = std::exchange(other._taskCode, nullptr);
-    _parameter = std::exchange(other._parameter, nullptr);
+    taskHandle = std::exchange(other.taskHandle, nullptr);
+    taskCode = std::exchange(other.taskCode, nullptr);
+    taskParameter = std::exchange(other.taskParameter, nullptr);
     return *this;
 }
 

@@ -4,8 +4,7 @@ namespace util::wrappers
 class ITaskWithMemberFunction
 {
 public:
-    virtual void taskMain() = 0;
-    virtual ~ITaskWithMemberFunction() = default;
+    virtual void taskMain(void *parameters) = 0;
 };
 
 } // namespace util::wrappers

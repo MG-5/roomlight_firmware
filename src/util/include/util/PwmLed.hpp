@@ -35,9 +35,7 @@ enum class DualLedColor
     Red,
     Green,
     Yellow,
-    Orange,
-    DarkGreen,
-    DarkRed
+    Orange
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -63,27 +61,17 @@ private:
 
             case DualLedColor::Yellow:
                 ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setMaximumPwm();
+                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 3);
                 break;
 
             case DualLedColor::Orange:
                 ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 4);
+                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 8);
                 break;
 
             case DualLedColor::Green:
                 ledRedPwmOutput.setPwmValue(0);
                 ledGreenPwmOutput.setMaximumPwm();
-                break;
-
-            case DualLedColor::DarkGreen:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 8);
-                break;
-
-            case DualLedColor::DarkRed:
-                ledRedPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 8);
-                ledGreenPwmOutput.setPwmValue(0);
                 break;
 
             default:

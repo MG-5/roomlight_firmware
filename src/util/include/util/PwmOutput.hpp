@@ -20,19 +20,19 @@ public:
 
     void setPwmValue(TimerResolution pwmValue) const
     {
-        if constexpr (core::BuildConfiguration::IsEmbeddedBuild)
+        if constexpr (core::BuildConfiguration::isEmbeddedBuild)
             __HAL_TIM_SET_COMPARE(TimerHandle, ChannelNumber, pwmValue);
     }
 
     void setMaximumPwm() const
     {
-        if constexpr (core::BuildConfiguration::IsEmbeddedBuild)
+        if constexpr (core::BuildConfiguration::isEmbeddedBuild)
         {
             __HAL_TIM_SET_COMPARE(TimerHandle, ChannelNumber,
                                   std::numeric_limits<TimerResolution>::max());
         }
     }
-    
+
 private:
     TIM_HandleTypeDef *const TimerHandle;
     const uint32_t ChannelNumber;

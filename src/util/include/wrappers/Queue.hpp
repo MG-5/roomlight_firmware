@@ -12,17 +12,14 @@ template <typename T>
 class Queue
 {
 public:
-    explicit Queue(size_t length) : handle(xQueueCreate(length, sizeof(T)))
+    explicit Queue(size_t length) : queueHandle(xQueueCreate(length, sizeof(T)))
     {
-        SafeAssert(handle != nullptr);
+        SafeAssert(queueHandle != nullptr);
     };
 
     ~Queue()
     {
-        if (handle != nullptr)
-        {
-            vQueueDelete(handle);
-        }
+        vQueueDelete(queueHandle);
     }
 
     Queue(const Queue &other) = delete;
@@ -35,42 +32,42 @@ public:
 
     Queue &operator=(Queue &&other) noexcept
     {
-        handle = std::exchange(other.handle, nullptr);
+        queueHandle = std::exchange(other.queueHandle, nullptr);
         return *this;
     };
 
     [[nodiscard]] BaseType_t getMessagesWaiting() const
     {
-        return uxQueueMessagesWaiting(handle);
+        return uxQueueMessagesWaiting(queueHandle);
     }
     [[nodiscard]] BaseType_t getMessagesWaitingFromISR() const
     {
-        return uxQueueMessagesWaitingFromISR(handle);
+        return uxQueueMessagesWaitingFromISR(queueHandle);
     }
 
     void sendOverwrite(const T &item) const
     {
-        xQueueOverwrite(handle, static_cast<const void *>(&item));
+        xQueueOverwrite(queueHandle, static_cast<const void *>(&item));
     }
     void sendOverwriteFromISR(const T &item, BaseType_t &pxHigherPriorityTaskWoken) const
     {
-        xQueueOverwriteFromISR(handle, static_cast<const void *>(&item),
+        xQueueOverwriteFromISR(queueHandle, static_cast<const void *>(&item),
                                &pxHigherPriorityTaskWoken);
     }
     bool send(const T &item, TickType_t ticksToWait) const
     {
-        return xQueueSend(handle, static_cast<const void *>(&item), ticksToWait) == pdPASS;
+        return xQueueSend(queueHandle, static_cast<const void *>(&item), ticksToWait) == pdPASS;
     }
     bool sendFromISR(const T &item, BaseType_t &pxHigherPriorityTaskWoken) const
     {
-        return xQueueSendFromISR(handle, static_cast<const void *>(&item),
+        return xQueueSendFromISR(queueHandle, static_cast<const void *>(&item),
                                  &pxHigherPriorityTaskWoken) == pdPASS;
     }
 
     std::optional<T> peek(TickType_t ticksToWait) const
     {
         T data;
-        const auto Res = xQueuePeek(handle, static_cast<void *>(&data), ticksToWait);
+        const auto Res = xQueuePeek(queueHandle, static_cast<void *>(&data), ticksToWait);
         if (Res == pdPASS)
         {
             return {data};
@@ -80,7 +77,7 @@ public:
     std::optional<T> peekFromISR() const
     {
         T data;
-        const auto Res = xQueuePeekFromISR(handle, static_cast<void *>(&data));
+        const auto Res = xQueuePeekFromISR(queueHandle, static_cast<void *>(&data));
         if (Res == pdPASS)
         {
             return {data};
@@ -91,7 +88,7 @@ public:
     std::optional<T> receive(TickType_t ticksToWait) const
     {
         T data;
-        const auto Res = xQueueReceive(handle, static_cast<void *>(&data), ticksToWait);
+        const auto Res = xQueueReceive(queueHandle, static_cast<void *>(&data), ticksToWait);
         if (Res == pdPASS)
         {
             return {data};
@@ -101,8 +98,8 @@ public:
     std::optional<T> receiveFromISR(BaseType_t &pxHigherPriorityTaskWoken) const
     {
         T data;
-        const auto Res =
-            xQueueReceiveFromISR(handle, static_cast<void *>(&data), &pxHigherPriorityTaskWoken);
+        const auto Res = xQueueReceiveFromISR(queueHandle, static_cast<void *>(&data),
+                                              &pxHigherPriorityTaskWoken);
         if (Res == pdPASS)
         {
             return {data};
@@ -112,11 +109,11 @@ public:
 
     void reset() const
     {
-        xQueueReset(handle);
+        xQueueReset(queueHandle);
     }
 
 private:
-    QueueHandle_t handle{nullptr};
+    QueueHandle_t queueHandle{nullptr};
 };
 
 } // namespace util::wrappers

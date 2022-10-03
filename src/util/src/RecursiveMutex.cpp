@@ -4,32 +4,32 @@
 
 namespace util::wrappers
 {
-RecursiveMutex::RecursiveMutex() : m_mutex(xSemaphoreCreateRecursiveMutex())
+RecursiveMutex::RecursiveMutex() : mutexHandle(xSemaphoreCreateRecursiveMutex())
 {
-    SafeAssert(m_mutex != nullptr);
+    SafeAssert(mutexHandle != nullptr);
 }
 
 RecursiveMutex::~RecursiveMutex()
 {
-    if (m_mutex != nullptr)
+    if (mutexHandle != nullptr)
     {
-        vSemaphoreDelete(m_mutex);
+        vSemaphoreDelete(mutexHandle);
     }
 }
 
 void RecursiveMutex::lock()
 {
-    xSemaphoreTakeRecursive(m_mutex, portMAX_DELAY);
+    xSemaphoreTakeRecursive(mutexHandle, portMAX_DELAY);
 }
 
 bool RecursiveMutex::lockWithTimeout(const TickType_t timeToWait)
 {
-    return xSemaphoreTakeRecursive(m_mutex, timeToWait) == pdPASS;
+    return xSemaphoreTakeRecursive(mutexHandle, timeToWait) == pdPASS;
 }
 
 void RecursiveMutex::unlock()
 {
-    xSemaphoreGiveRecursive(m_mutex);
+    xSemaphoreGiveRecursive(mutexHandle);
 }
 
 RecursiveMutex::RecursiveMutex(RecursiveMutex &&other) noexcept
@@ -39,7 +39,7 @@ RecursiveMutex::RecursiveMutex(RecursiveMutex &&other) noexcept
 
 RecursiveMutex &RecursiveMutex::operator=(RecursiveMutex &&other) noexcept
 {
-    m_mutex = std::exchange(other.m_mutex, nullptr);
+    mutexHandle = std::exchange(other.mutexHandle, nullptr);
     return *this;
 }
 

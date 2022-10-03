@@ -8,7 +8,7 @@ class ScopedLock
 {
 public:
     /// empty initialisation, not doing anything
-    ScopedLock() = default;
+    ScopedLock();
 
     /// acquires mutex
     explicit ScopedLock(wrappers::IMutex &mutex);

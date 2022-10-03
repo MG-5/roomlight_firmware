@@ -5,6 +5,10 @@ util::ScopedLock::ScopedLock(util::wrappers::IMutex &mutex) : mtx(&mutex)
     mtx->lock();
 }
 
+util::ScopedLock::ScopedLock()
+{
+}
+
 util::ScopedLock::~ScopedLock()
 {
     if (mtx)
