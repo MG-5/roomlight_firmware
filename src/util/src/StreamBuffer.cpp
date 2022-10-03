@@ -28,16 +28,15 @@ bool StreamBuffer::isFull()
     return xStreamBufferIsFull(streamHandle) == pdTRUE;
 }
 
-size_t StreamBuffer::receive(std::span<uint8_t> buffer, const TickType_t ticksToWait)
+size_t StreamBuffer::receive(uint8_t *buffer, size_t bufferSize, const TickType_t ticksToWait)
 {
-    return xStreamBufferReceive(streamHandle, buffer.data(), buffer.size(), ticksToWait);
+    return xStreamBufferReceive(streamHandle, buffer, bufferSize, ticksToWait);
 }
 
-size_t StreamBuffer::receiveFromISR(std::span<uint8_t> buffer,
+size_t StreamBuffer::receiveFromISR(uint8_t *buffer, size_t bufferSize,
                                     BaseType_t *pxHigherPriorityTaskWoken)
 {
-    return xStreamBufferReceiveFromISR(streamHandle, buffer.data(), buffer.size(),
-                                       pxHigherPriorityTaskWoken);
+    return xStreamBufferReceiveFromISR(streamHandle, buffer, bufferSize, pxHigherPriorityTaskWoken);
 }
 
 bool StreamBuffer::reset()
@@ -50,7 +49,7 @@ bool StreamBuffer::reset()
     return res;
 }
 
-size_t StreamBuffer::send(uint8_t *buffer, const size_t bufferSize const TickType_t ticksToWait)
+size_t StreamBuffer::send(uint8_t *buffer, const size_t bufferSize, const TickType_t ticksToWait)
 {
     return xStreamBufferSend(streamHandle, buffer, bufferSize, ticksToWait);
 }

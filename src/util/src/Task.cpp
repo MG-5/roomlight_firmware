@@ -53,7 +53,7 @@ int32_t Task::notify(const uint32_t ulValue, const NotifyAction eAction)
 int32_t Task::notifyFromISR(const uint32_t ulValue, const NotifyAction eAction,
                             int32_t *pxHigherPriorityTaskWoken)
 {
-#if OTTOCAR_IS_EMBEDDED_BUILD()
+#if IS_EMBEDDED_BUILD()
     return xTaskNotifyFromISR(taskHandle, ulValue, notifyActionConverter(eAction),
                               pxHigherPriorityTaskWoken);
 #else

@@ -1,7 +1,6 @@
 #pragma once
 #include <FreeRTOS.h>
 #include <core/SafeAssert.h>
-#include <core/SpanCompatibility.hpp>
 #include <stream_buffer.h>
 
 namespace util::wrappers
@@ -20,8 +19,9 @@ public:
 
     bool isEmpty();
     bool isFull();
-    size_t receive(std::span<uint8_t> buffer, TickType_t ticksToWait);
-    size_t receiveFromISR(std::span<uint8_t> buffer, BaseType_t *pxHigherPriorityTaskWoken);
+    size_t receive(uint8_t *buffer, size_t bufferSize, TickType_t ticksToWait);
+    size_t receiveFromISR(uint8_t *buffer, size_t bufferSize,
+                          BaseType_t *pxHigherPriorityTaskWoken);
     bool reset();
     size_t send(uint8_t *buffer, size_t bufferSize, TickType_t ticksToWait);
     size_t sendFromISR(uint8_t *buffer, size_t bufferSize, BaseType_t *pxHigherPriorityTaskWoken);
