@@ -64,9 +64,5 @@ void LedFading::taskMain(void *)
                 break;
             }
         }
-
-        // trigger mosfet zero check task if needed
-        if (!restart)
-            addrLeds.notify(1, util::wrappers::NotifyAction::SetBits);
     }
 }
