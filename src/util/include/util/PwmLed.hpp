@@ -13,16 +13,26 @@ class SingleLed : public LedBase
 {
 
 public:
-    explicit SingleLed(PwmOutput<TimerResolution> pwmOutput) : pwmOutput(pwmOutput){};
+    explicit SingleLed(PwmOutput<TimerResolution> pwmOutput, bool isInverted = false)
+        : pwmOutput(pwmOutput)
+    {
+        LedBase::isInverted = isInverted;
+    }
 
     void turnOnInherited() override
     {
-        pwmOutput.setMaximumPwm();
+        if (isInverted)
+            pwmOutput.setMaximumPwm();
+        else
+            pwmOutput.setPwmValue(0);
     }
 
     void turnOffInherited() override
     {
-        pwmOutput.setPwmValue(0);
+        if (isInverted)
+            pwmOutput.setPwmValue(0);
+        else
+            pwmOutput.setMaximumPwm();
     }
 
 private:
@@ -55,36 +65,61 @@ private:
             switch (currentColor)
             {
             case DualLedColor::Red:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(0);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
                 break;
 
             case DualLedColor::Yellow:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 3);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 3, ledGreenPwmOutput);
                 break;
 
             case DualLedColor::Orange:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 8);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 8, ledGreenPwmOutput);
                 break;
 
             case DualLedColor::Green:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setMaximumPwm();
+                setBrightnessOff(ledRedPwmOutput);
+                setMaximumBrightness(ledGreenPwmOutput);
                 break;
 
             default:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setPwmValue(0);
+                setBrightnessOff(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
                 break;
             }
         }
         else
         {
-            ledRedPwmOutput.setPwmValue(0);
-            ledGreenPwmOutput.setPwmValue(0);
+            setBrightnessOff(ledRedPwmOutput);
+            setBrightnessOff(ledGreenPwmOutput);
         }
+    }
+
+    void setBrightnessOff(PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (isInverted)
+            pwmOutput.setPwmValue(0);
+        else
+            pwmOutput.setMaximumPwm();
+    }
+
+    void setMaximumBrightness(PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (isInverted)
+            pwmOutput.setMaximumPwm();
+        else
+            pwmOutput.setPwmValue(0);
+    }
+
+    void setBrightness(TimerResolution targetBrightness, PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (!isInverted)
+            pwmOutput.setPwmValue(targetBrightness);
+
+        else
+            pwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() - targetBrightness);
     }
 
     PwmOutput<TimerResolution> ledRedPwmOutput;
@@ -110,9 +145,12 @@ class TripleLed : public MultiColorLedBase<TripleLedColor>
 public:
     TripleLed(PwmOutput<TimerResolution> ledRedPwmOutput,
               PwmOutput<TimerResolution> ledGreenPwmOutput,
-              PwmOutput<TimerResolution> ledBluePwmOutput)
+              PwmOutput<TimerResolution> ledBluePwmOutput, bool isInverted = false)
         : ledRedPwmOutput{ledRedPwmOutput}, ledGreenPwmOutput{ledGreenPwmOutput},
-          ledBluePwmOutput{ledBluePwmOutput} {};
+          ledBluePwmOutput{ledBluePwmOutput}
+    {
+        LedBase::isInverted = isInverted;
+    }
 
 private:
     void update() override
@@ -122,60 +160,85 @@ private:
             switch (currentColor)
             {
             case TripleLedColor::Red:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(0);
-                ledBluePwmOutput.setPwmValue(0);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
+                setBrightnessOff(ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Yellow:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 3);
-                ledBluePwmOutput.setPwmValue(0);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 3, ledGreenPwmOutput);
+                setBrightnessOff(ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Orange:
-                ledRedPwmOutput.setMaximumPwm();
-                ledGreenPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 8);
-                ledBluePwmOutput.setPwmValue(0);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 8, ledGreenPwmOutput);
+                setBrightnessOff(ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Green:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setMaximumPwm();
-                ledBluePwmOutput.setPwmValue(0);
+                setBrightnessOff(ledRedPwmOutput);
+                setMaximumBrightness(ledGreenPwmOutput);
+                setBrightnessOff(ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Blue:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setPwmValue(0);
+                setBrightnessOff(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
                 ledBluePwmOutput.setMaximumPwm();
                 break;
 
             case TripleLedColor::Turquoise:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setMaximumPwm();
-                ledBluePwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 2);
+                setBrightnessOff(ledRedPwmOutput);
+                setMaximumBrightness(ledGreenPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 2, ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Purple:
-                ledRedPwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max());
-                ledGreenPwmOutput.setPwmValue(0);
-                ledBluePwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() / 2);
+                setMaximumBrightness(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
+                setBrightness(std::numeric_limits<TimerResolution>::max() / 2, ledBluePwmOutput);
                 break;
 
             default:
-                ledRedPwmOutput.setPwmValue(0);
-                ledGreenPwmOutput.setPwmValue(0);
-                ledBluePwmOutput.setPwmValue(0);
+                setBrightnessOff(ledRedPwmOutput);
+                setBrightnessOff(ledGreenPwmOutput);
+                setBrightnessOff(ledBluePwmOutput);
                 break;
             }
         }
         else
         {
-            ledRedPwmOutput.setPwmValue(0);
-            ledGreenPwmOutput.setPwmValue(0);
-            ledBluePwmOutput.setPwmValue(0);
+            setBrightnessOff(ledRedPwmOutput);
+            setBrightnessOff(ledGreenPwmOutput);
+            setBrightnessOff(ledBluePwmOutput);
         }
+    }
+
+    void setBrightnessOff(PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (isInverted)
+            pwmOutput.setPwmValue(0);
+        else
+            pwmOutput.setMaximumPwm();
+    }
+
+    void setMaximumBrightness(PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (isInverted)
+            pwmOutput.setMaximumPwm();
+        else
+            pwmOutput.setPwmValue(0);
+    }
+
+    void setBrightness(TimerResolution targetBrightness, PwmOutput<TimerResolution> &pwmOutput)
+    {
+        if (!isInverted)
+            pwmOutput.setPwmValue(targetBrightness);
+
+        else
+            pwmOutput.setPwmValue(std::numeric_limits<TimerResolution>::max() - targetBrightness);
     }
 
     PwmOutput<TimerResolution> ledRedPwmOutput;

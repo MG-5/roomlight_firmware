@@ -84,6 +84,9 @@ protected:
 
     /// Normally used by inherited update functions to get the on/off state of LED object
     bool isOn = false;
+
+    /// Declares if LED output is inverted
+    bool isInverted = false;
 };
 
 //--------------------------------------------------------------------------------------------------

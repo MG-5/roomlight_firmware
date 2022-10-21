@@ -8,12 +8,15 @@ namespace util::binary_led
 class SingleLed : public LedBase
 {
 public:
-    explicit SingleLed(Gpio gpio) : ledGpio{gpio} {};
+    explicit SingleLed(Gpio gpio, bool isInverted = false) : ledGpio{gpio}
+    {
+        LedBase::isInverted = isInverted;
+    }
 
 private:
-    void update()
+    void update() override
     {
-        ledGpio.write(isOn);
+        ledGpio.write(isOn ^ isInverted);
     }
 
     Gpio ledGpio;
@@ -32,16 +35,21 @@ enum class DualLedColor
 class DualLed : public MultiColorLedBase<DualLedColor>
 {
 public:
-    DualLed(Gpio ledRedGpio, Gpio ledGreenGpio)
-        : ledRedGpio{ledRedGpio}, ledGreenGpio{ledGreenGpio} {};
+    DualLed(Gpio ledRedGpio, Gpio ledGreenGpio, bool isInverted = false)
+        : ledRedGpio{ledRedGpio}, ledGreenGpio{ledGreenGpio}
+    {
+        LedBase::isInverted = isInverted;
+    }
 
 private:
     void update() override
     {
-        if (isOn)
+        if (isOn ^ isInverted)
         {
-            ledRedGpio.write((currentColor == DualLedColor::Red || currentColor == DualLedColor::Yellow));
-            ledGreenGpio.write((currentColor == DualLedColor::Green || currentColor == DualLedColor::Yellow));
+            ledRedGpio.write(
+                (currentColor == DualLedColor::Red || currentColor == DualLedColor::Yellow));
+            ledGreenGpio.write(
+                (currentColor == DualLedColor::Green || currentColor == DualLedColor::Yellow));
         }
         else
         {
