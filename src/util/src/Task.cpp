@@ -26,7 +26,7 @@ Task::Task(TaskFunction_t taskCode, const char *name, uint16_t stackDepth, void 
 
 void Task::registerTask(TaskHandle_t handle)
 {
-    if constexpr (core::BuildConfiguration::isEmbeddedBuild)
+    if constexpr (core::BuildConfiguration::IsEmbeddedBuild)
     {
 
         if (taskListIndex == 0)
