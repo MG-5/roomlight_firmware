@@ -35,5 +35,5 @@ private:
 
     util::Gpio touchButtonGpio{Touch_GPIO_Port, Touch_Pin};
     util::Button touchButton{touchButtonGpio,
-                             [this](util::Button::Action action) { buttonCallback(action); }};
+                             [this](util::Button::Action action) { buttonCallback(action); }, true};
 };
