@@ -312,9 +312,9 @@ void AddressableLeds::taskMain(void *)
         // wait for 500 ms unless a signal is occured
         uint32_t notifiedValue;
         xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(500));
-        if ((notifiedValue & 0x01U) != 0)
+        if ((notifiedValue & 1) != 0)
         {
-            // turn on mosfet if needed
+            // turn on/off mosfets if needed
             checkStripsForColor();
         }
     }

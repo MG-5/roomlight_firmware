@@ -186,7 +186,7 @@ private:
             case TripleLedColor::Blue:
                 setBrightnessOff(ledRedPwmOutput);
                 setBrightnessOff(ledGreenPwmOutput);
-                ledBluePwmOutput.setMaximumPwm();
+                setMaximumBrightness(ledBluePwmOutput);
                 break;
 
             case TripleLedColor::Turquoise:

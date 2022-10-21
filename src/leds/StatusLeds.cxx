@@ -4,6 +4,10 @@ using util::pwm_led::TripleLedColor;
 
 void StatusLeds::taskMain(void *)
 {
+    RedChannel.startPwmTimer();
+    GreenChannel.startPwmTimer();
+    BlueChannel.startPwmTimer();
+
     auto lastWakeTime = xTaskGetTickCount();
 
     while (true)
@@ -18,6 +22,9 @@ void StatusLeds::taskMain(void *)
 
 void StatusLeds::updateStates()
 {
+    addrLeds.stripEnabled[0] ? ledGreen1.turnOn() : ledGreen1.turnOff();
+    addrLeds.stripEnabled[1] ? ledGreen2.turnOn() : ledGreen2.turnOff();
+
     switch (addrLeds.getLightState())
     {
     case AddressableLeds::LightState::Off:
