@@ -255,7 +255,7 @@ void AddressableLeds::checkStripsForColor()
              (currentLightMode == LightMode::BothStrips && prevLightMode == LightMode::OnlyStrip1))
     {
         // let LED chips some time to start
-        for (int i = 0; i < 750; ++i)
+        for (int i = 0; i < 550; ++i)
             asm volatile("nop");
     }
 
