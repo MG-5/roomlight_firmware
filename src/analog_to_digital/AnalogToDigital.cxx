@@ -1,56 +1,37 @@
-#include "adc.h"
 #include "FreeRTOS.h"
+#include "adc.h"
 #include "task.h"
 
+#include "AnalogToDigital.hpp"
 #include "units/si/current.hpp"
 #include "units/si/resistance.hpp"
 #include "units/si/scalar.hpp"
 #include "units/si/voltage.hpp"
 #include <array>
 
-units::si::Voltage ledVoltage{0.0_V};
-units::si::Current ledCurrent{0.0_A};
-
-extern TaskHandle_t adcHandle;
-
-namespace
-{
-constexpr auto AdcChannelCount = 2;
-constexpr auto ReferenceVoltage = 3.3_V;
-constexpr auto AdcResolution = 4095_;
-
-// 10k to 1k voltage divider = > (10k + 1k) / 10k = 11 multiplier
-constexpr auto VoltageDivider = 11.0_;
-constexpr auto AmplifierGain = 50_;
-constexpr auto SenseResistance = 5_mOhm;
-
-using RawAdcResultArray = std::array<uint16_t, AdcChannelCount>;
-RawAdcResultArray adcResults;
-} // namespace
-
-void calibrateAdc()
+void AnalogToDigital::calibrateAdc()
 {
     HAL_ADCEx_Calibration_Start(&hadc1);
 }
 
-void startConversion()
+void AnalogToDigital::startConversion()
 {
     HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t *>(adcResults.data()), AdcChannelCount);
 }
 
-void waitUntilConversionFinished()
+void AnalogToDigital::waitUntilConversionFinished()
 {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 }
 
-extern "C" void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *)
+void AnalogToDigital::conversionCompleteCallback()
 {
     auto higherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(adcHandle, &higherPriorityTaskWoken);
+    notifyFromISR(1, util::wrappers::NotifyAction::SetBits, &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
-extern "C" void adcTask(void *)
+void AnalogToDigital::taskMain(void *)
 {
     auto lastWakeTime = xTaskGetTickCount();
 

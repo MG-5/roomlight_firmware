@@ -22,25 +22,27 @@ set(core_BUILDCONFIGURATION "embedded")
 
 add_subdirectory(core)
 add_subdirectory(src/util)
-add_subdirectory(src/gamma/gcem)
-
-add_compile_definitions(STM32G0xx)
+add_subdirectory(src/leds/gamma/gcem)
 
 set(INCLUDE_FILES
 	src
-	src/gamma
 )
 
 set(Sources
-	src/button/button_handler.cxx
-	src/button/Button.cxx
+	src/analog_to_digital/AnalogToDigital.cxx
 
-	src/adc.cxx
-	src/digitalLED.cxx
+	src/button/ButtonHandler.cxx
+
+	src/leds/AddressableLeds.cxx
+	src/leds/LedFading.cxx
+	src/leds/StatusLeds.cxx
+
+	src/wireless_gateway/PacketProcessor.cxx
+	src/wireless_gateway/Wifi.cxx
+
+	src/Application.cxx
+
 	src/handlers.cxx
-	src/StatusLeds.cxx
-	src/uart.cxx
-	src/Wifi.cxx
 )
 
 # Instructs CMake to build your firmware

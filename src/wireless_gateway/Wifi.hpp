@@ -1,31 +1,81 @@
 #pragma once
-#include "protocol.hpp"
 
-namespace Wifi
+#include "leds/ledConstants.hpp"
+#include "util/gpio.hpp"
+#include "wrappers/EventGroup.hpp"
+#include "wrappers/StreamBuffer.hpp"
+#include "wrappers/Task.hpp"
+
+#include "main.h"
+
+class Wifi : public util::wrappers::TaskWithMemberFunctionBase
 {
-enum class Mode
-{
-    Disabled,
-    Programming,
-    Normal
+public:
+    static constexpr auto EventConnection = 1 << 0;
+
+    static constexpr auto EventWifiUpgradeStarted = 1 << 1;
+    static constexpr auto EventWifiUpgradeFinished = 1 << 2;
+
+    enum class Mode
+    {
+        Disabled,
+        Programming,
+        Normal
+    };
+
+    enum class Result
+    {
+        Success = 0,
+        Failure,
+        Timeout,
+        TooShort,
+        InvalidResponse
+    };
+
+    util::wrappers::EventGroup wifiEvents{};
+
+    Wifi(util::wrappers::StreamBuffer &txMessageBuffer, util::wrappers::StreamBuffer &packetBuffer)
+        : TaskWithMemberFunctionBase("wifiDaemonTask", 128, osPriorityLow), //
+          txMessageBuffer(txMessageBuffer),                                 //
+          packetBuffer(packetBuffer){};
+
+    Mode getMode();
+
+    /// Set the mode of the Wifi module.
+    /// Requires restarting the module if mode differs from the mode the
+    /// module is currently in unless forceRestart is set to true.
+    void setMode(Wifi::Mode mode, bool forceRestart = false);
+
+    void receiveData(const uint8_t *data, uint32_t length);
+    bool checkConnection();
+    void sendResponsePacket(PacketHeader *header, const uint8_t *payload);
+
+protected:
+    [[noreturn]] void taskMain(void *) override;
+
+private:
+    util::wrappers::StreamBuffer &txMessageBuffer;
+    util::wrappers::StreamBuffer &packetBuffer;
+
+    Mode mode = Wifi::Mode::Disabled;
+
+    // TX
+    static constexpr auto TxPacketBufferSize = 64;
+    uint8_t finalFrame[TxPacketBufferSize];
+
+    // RX
+    size_t bufferPosition = 0;
+    static constexpr auto RxDataBufferSize = 1024;
+    uint8_t rxDataBuffer[RxDataBufferSize];
+
+    static constexpr auto MaximumPayloadSize = sizeof(LedSegment) * TotalPixels;
+
+    util::Gpio espGpio0{ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin};
+    util::Gpio espEnable{ESP_EN_GPIO_Port, ESP_EN_Pin};
+    util::Gpio espReset{ESP_RST_GPIO_Port, ESP_RST_Pin};
+
+    void swapSrcDest(uint8_t &val);
+    void initWifi();
+
+    void sendPacket(const PacketHeader *header, const uint8_t *payload);
 };
-
-enum class Result
-{
-    Success = 0,
-    Failure,
-    Timeout,
-    TooShort,
-    InvalidResponse
-};
-
-Wifi::Mode getMode();
-
-/// Set the mode of the Wifi module.
-/// Requires restarting the module if mode differs from the mode the
-/// module is currently in unless forceRestart is set to true.
-void setMode(Wifi::Mode mode, bool forceRestart = false);
-
-void receiveData(const uint8_t *data, uint32_t length);
-bool checkConnection();
-} // namespace Wifi

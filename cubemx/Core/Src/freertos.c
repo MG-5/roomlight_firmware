@@ -52,7 +52,7 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 64 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for statusLed */
@@ -61,62 +61,6 @@ const osThreadAttr_t statusLed_attributes = {
   .name = "statusLed",
   .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityLow1,
-};
-/* Definitions for adc */
-osThreadId_t adcHandle;
-const osThreadAttr_t adc_attributes = {
-  .name = "adc",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow2,
-};
-/* Definitions for digitalLED */
-osThreadId_t digitalLEDHandle;
-const osThreadAttr_t digitalLED_attributes = {
-  .name = "digitalLED",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
-/* Definitions for uartRX */
-osThreadId_t uartRXHandle;
-const osThreadAttr_t uartRX_attributes = {
-  .name = "uartRX",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for uartTX */
-osThreadId_t uartTXHandle;
-const osThreadAttr_t uartTX_attributes = {
-  .name = "uartTX",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityNormal5,
-};
-/* Definitions for processPackets */
-osThreadId_t processPacketsHandle;
-const osThreadAttr_t processPackets_attributes = {
-  .name = "processPackets",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
-/* Definitions for wifiDaemon */
-osThreadId_t wifiDaemonHandle;
-const osThreadAttr_t wifiDaemon_attributes = {
-  .name = "wifiDaemon",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for ledFading */
-osThreadId_t ledFadingHandle;
-const osThreadAttr_t ledFading_attributes = {
-  .name = "ledFading",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal7,
-};
-/* Definitions for zeroChecker */
-osThreadId_t zeroCheckerHandle;
-const osThreadAttr_t zeroChecker_attributes = {
-  .name = "zeroChecker",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow3,
 };
 /* Definitions for buttonUpdate */
 osThreadId_t buttonUpdateHandle;
@@ -139,17 +83,9 @@ const osThreadAttr_t uiUpdate_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-extern void statusLedTask(void *argument);
-extern void adcTask(void *argument);
-extern void digitalLEDTask(void *argument);
-extern void uartRXTask(void *argument);
-extern void uartTXTask(void *argument);
-extern void processPacketsTask(void *argument);
-extern void wifiDaemonTask(void *argument);
-extern void ledFadingTask(void *argument);
-extern void zeroCheckerTask(void *argument);
-extern void buttonUpdateTask(void *argument);
-extern void uiUpdateTask(void *argument);
+void statusLedTask(void *argument);
+void buttonUpdateTask(void *argument);
+void uiUpdateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -198,30 +134,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of statusLed */
   statusLedHandle = osThreadNew(statusLedTask, NULL, &statusLed_attributes);
 
-  /* creation of adc */
-  adcHandle = osThreadNew(adcTask, NULL, &adc_attributes);
-
-  /* creation of digitalLED */
-  digitalLEDHandle = osThreadNew(digitalLEDTask, NULL, &digitalLED_attributes);
-
-  /* creation of uartRX */
-  uartRXHandle = osThreadNew(uartRXTask, NULL, &uartRX_attributes);
-
-  /* creation of uartTX */
-  uartTXHandle = osThreadNew(uartTXTask, NULL, &uartTX_attributes);
-
-  /* creation of processPackets */
-  processPacketsHandle = osThreadNew(processPacketsTask, NULL, &processPackets_attributes);
-
-  /* creation of wifiDaemon */
-  wifiDaemonHandle = osThreadNew(wifiDaemonTask, NULL, &wifiDaemon_attributes);
-
-  /* creation of ledFading */
-  ledFadingHandle = osThreadNew(ledFadingTask, NULL, &ledFading_attributes);
-
-  /* creation of zeroChecker */
-  zeroCheckerHandle = osThreadNew(zeroCheckerTask, NULL, &zeroChecker_attributes);
-
   /* creation of buttonUpdate */
   buttonUpdateHandle = osThreadNew(buttonUpdateTask, NULL, &buttonUpdate_attributes);
 
@@ -245,7 +157,7 @@ void MX_FREERTOS_Init(void) {
  * @retval None
  */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+__weak void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
     /* Infinite loop */
@@ -254,6 +166,60 @@ void StartDefaultTask(void *argument)
         osDelay(1);
     }
   /* USER CODE END StartDefaultTask */
+}
+
+/* USER CODE BEGIN Header_statusLedTask */
+/**
+* @brief Function implementing the statusLed thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_statusLedTask */
+__weak void statusLedTask(void *argument)
+{
+  /* USER CODE BEGIN statusLedTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END statusLedTask */
+}
+
+/* USER CODE BEGIN Header_buttonUpdateTask */
+/**
+* @brief Function implementing the buttonUpdate thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_buttonUpdateTask */
+__weak void buttonUpdateTask(void *argument)
+{
+  /* USER CODE BEGIN buttonUpdateTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END buttonUpdateTask */
+}
+
+/* USER CODE BEGIN Header_uiUpdateTask */
+/**
+* @brief Function implementing the uiUpdate thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_uiUpdateTask */
+__weak void uiUpdateTask(void *argument)
+{
+  /* USER CODE BEGIN uiUpdateTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END uiUpdateTask */
 }
 
 /* Private application code --------------------------------------------------*/

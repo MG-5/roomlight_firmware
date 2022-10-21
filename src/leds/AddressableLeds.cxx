@@ -5,9 +5,9 @@
 #include "gpio.h"
 #include "tim.h"
 
+#include "AddressableLeds.hpp"
 #include "BitBanding.hpp"
 #include "StatusLeds.hpp"
-#include "digitalLED.hpp"
 #include "gamma/GammaLUT.hpp"
 #include "helpers/freertos.hpp"
 #include "protocol.hpp"
@@ -17,59 +17,8 @@
 #include <cmath>
 #include <cstring>
 
-std::array<LEDSegment, TotalPixels> ledCurrentData{};
-std::array<LEDSegment, TotalPixels> ledTargetData{};
-std::array<LEDSegment, TotalPixels> ledTargetData2{};
-LightState currentLightState = LightState::Off;
-LightMode currentLightMode = LightMode::BothStrips;
-
-namespace
-{
-LightState prevLightState = currentLightState;
-LightMode prevLightMode = currentLightMode;
-
-struct DiffLEDSegment
-{
-    int16_t green = 0;
-    int16_t red = 0;
-    int16_t blue = 0;
-    int16_t white = 0;
-};
-
-std::array<DiffLEDSegment, TotalPixels> ledDiffData{};
-
-bool stripEnabled[NumberOfDataPins];
-
-util::Gpio mosfets[NumberOfDataPins] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
-                                        {EN_MOS2_GPIO_Port, EN_MOS2_Pin}};
-StatusLed *mosfetLeds[NumberOfDataPins]{ledGreen1, ledGreen2};
-LEDSegment zeroSegment;
-
-struct digitalLEDBufferItem
-{
-    LEDSegment *frameBufferPointer;
-    uint32_t frameBufferSize;
-    uint32_t frameBufferCounter;
-    uint8_t channel; // digital output pin
-};
-
-struct digitalLEDStruct
-{
-    digitalLEDBufferItem item[NumberOfDataPins];
-    uint32_t repeatCounter;
-};
-
-digitalLEDStruct digitalLED;
-
-// buffer for two LED segments
-constexpr auto DMABitBufferSize = 32 * 2;
-uint16_t DMABitBuffer[DMABitBufferSize];
-
-// Define source arrays with output pins
-constexpr uint32_t dLED_IOs[] = {DATA1_Pin | DATA2_Pin};
-
-void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8_t green,
-                      uint8_t blue, uint8_t white)
+void AddressableLeds::setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red,
+                                       uint8_t green, uint8_t blue, uint8_t white)
 {
     uint32_t calcRow = bufferSegment * 32;
     uint32_t invRed = ~red;
@@ -77,7 +26,7 @@ void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8
     uint32_t invBlue = ~blue;
     uint32_t invWhite = ~white;
 
-    // Bitband optimizations with pure increments, 5us interrupts
+    // Bitband optimizations with pure increments
     const auto dataAddress = reinterpret_cast<uint32_t>(&DMABitBuffer[(calcRow)]);
     auto *bitBand = getBitBandingPointer(dataAddress, channel);
 
@@ -182,42 +131,42 @@ void setPixelInBuffer(uint8_t channel, uint8_t bufferSegment, uint8_t red, uint8
     bitBand += 16;
 }
 
-void loadNextFramebufferData(digitalLEDBufferItem *bItem, uint32_t row, bool reverse)
+void AddressableLeds::loadNextFramebufferData(LedBufferItem &bufferItem, uint32_t row, bool reverse)
 {
-    uint32_t r = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].red];
-    uint32_t g = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].green];
-    uint32_t b = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].blue];
-    uint32_t w = GammaLUT[bItem->frameBufferPointer[bItem->frameBufferCounter].white];
+    uint32_t red = GammaLUT[bufferItem.frameBufferPointer[bufferItem.frameBufferCounter].red];
+    uint32_t green = GammaLUT[bufferItem.frameBufferPointer[bufferItem.frameBufferCounter].green];
+    uint32_t blue = GammaLUT[bufferItem.frameBufferPointer[bufferItem.frameBufferCounter].blue];
+    uint32_t white = GammaLUT[bufferItem.frameBufferPointer[bufferItem.frameBufferCounter].white];
 
     if (reverse)
     {
-        if (bItem->frameBufferCounter == 0)
-            bItem->frameBufferCounter = bItem->frameBufferSize - 1;
+        if (bufferItem.frameBufferCounter == 0)
+            bufferItem.frameBufferCounter = bufferItem.frameBufferSize - 1;
 
         else
-            bItem->frameBufferCounter--;
+            bufferItem.frameBufferCounter--;
     }
     else
     {
-        if (bItem->frameBufferCounter == bItem->frameBufferSize - 1)
-            bItem->frameBufferCounter = 0;
+        if (bufferItem.frameBufferCounter == bufferItem.frameBufferSize - 1)
+            bufferItem.frameBufferCounter = 0;
 
         else
-            bItem->frameBufferCounter++;
+            bufferItem.frameBufferCounter++;
     }
 
-    setPixelInBuffer(bItem->channel, row, r, g, b, w);
+    setPixelInBuffer(bufferItem.channel, row, red, green, blue, white);
 }
 
-void transferHalfHandler(DMA_HandleTypeDef *hdma)
+void AddressableLeds::transferHalfHandler()
 {
-    loadNextFramebufferData(&digitalLED.item[0], 0, true);
-    loadNextFramebufferData(&digitalLED.item[1], 0, false);
+    loadNextFramebufferData(ledStruct.item[0], 0, true);
+    loadNextFramebufferData(ledStruct.item[1], 0, false);
 }
 
-void transferCompleteHandler(DMA_HandleTypeDef *hdma)
+void AddressableLeds::transferCompleteHandler()
 {
-    digitalLED.repeatCounter++;
+    ledStruct.repeatCounter++;
 
     constexpr auto MaxLeds = []() -> auto
     {
@@ -229,12 +178,12 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
     }
     ();
 
-    if (digitalLED.repeatCounter == MaxLeds)
+    if (ledStruct.repeatCounter == MaxLeds)
     {
-        digitalLED.repeatCounter = 0;
+        ledStruct.repeatCounter = 0;
 
         // Transfer of all LEDs is done, disable timer
-        HAL_TIM_Base_Stop(&htim1);
+        HAL_TIM_Base_Stop(LedTimer);
 
         // Manually set outputs to low to generate 50us reset impulse
         for (uint32_t i = 0; i < 30; ++i)
@@ -245,40 +194,40 @@ void transferCompleteHandler(DMA_HandleTypeDef *hdma)
     else
     {
         // Load bitbuffer with next RGB LED values
-        loadNextFramebufferData(&digitalLED.item[0], 1, true);
-        loadNextFramebufferData(&digitalLED.item[1], 1, false);
+        loadNextFramebufferData(ledStruct.item[0], 1, true);
+        loadNextFramebufferData(ledStruct.item[1], 1, false);
     }
 }
 
-void sendBuffer()
+void AddressableLeds::sendBuffer()
 {
     // 47 Segments - reverse buffer
-    digitalLED.item[0].frameBufferCounter = digitalLED.item[0].frameBufferSize - 1;
-    loadNextFramebufferData(&digitalLED.item[0], 0, true);
-    loadNextFramebufferData(&digitalLED.item[0], 1, true);
+    ledStruct.item[0].frameBufferCounter = ledStruct.item[0].frameBufferSize - 1;
+    loadNextFramebufferData(ledStruct.item[0], 0, true);
+    loadNextFramebufferData(ledStruct.item[0], 1, true);
 
     // 37 + 46 segments
-    digitalLED.item[1].frameBufferCounter = 0;
-    loadNextFramebufferData(&digitalLED.item[1], 0, false);
-    loadNextFramebufferData(&digitalLED.item[1], 1, false);
+    ledStruct.item[1].frameBufferCounter = 0;
+    loadNextFramebufferData(ledStruct.item[1], 0, false);
+    loadNextFramebufferData(ledStruct.item[1], 1, false);
 
     // start TIM2
-    __HAL_TIM_SetCounter(&htim1, htim1.Init.Period - 1);
+    __HAL_TIM_SetCounter(LedTimer, htim1.Init.Period - 1);
 
     // reset DMA counter
-    HAL_DMA_Abort_IT(&hdma_tim1_ch1);
-    HAL_DMA_Start_IT(&hdma_tim1_ch1, reinterpret_cast<uint32_t>(DMABitBuffer),
+    HAL_DMA_Abort_IT(dmaLedTimerChannel1);
+    HAL_DMA_Start_IT(dmaLedTimerChannel1, reinterpret_cast<uint32_t>(DMABitBuffer),
                      reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), DMABitBufferSize);
 
-    HAL_TIM_Base_Start(&htim1);
+    HAL_TIM_Base_Start(LedTimer);
 }
 
-bool isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
+bool AddressableLeds::isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
 {
     for (auto i = fromSegment; i <= toSegment; i++)
     {
         // compare segment with zero
-        auto result = std::memcmp(&ledCurrentData[i], &zeroSegment, sizeof(LEDSegment));
+        auto result = std::memcmp(&ledCurrentData[i], &zeroSegment, sizeof(LedSegment));
 
         if (result != 0)
             return true;
@@ -286,7 +235,7 @@ bool isColorDataAvailable(uint8_t fromSegment, uint8_t toSegment)
     return false;
 }
 
-void checkStripsForColor()
+void AddressableLeds::checkStripsForColor()
 {
     stripEnabled[0] = isColorDataAvailable(0, Strip1Pixels - 1);
 
@@ -297,10 +246,7 @@ void checkStripsForColor()
         stripEnabled[1] = false;
 
     for (auto i = 0; i < NumberOfDataPins; i++)
-    {
         mosfets[i].write(stripEnabled[i]);
-        mosfetLeds[i]->mode = stripEnabled[i] ? StatusLedMode::On : StatusLedMode::Off;
-    }
 
     if (!stripEnabled[0] && !stripEnabled[1])
         currentLightState = LightState::Off;
@@ -308,7 +254,7 @@ void checkStripsForColor()
     else if (prevLightState == LightState::Off ||
              (currentLightMode == LightMode::BothStrips && prevLightMode == LightMode::OnlyStrip1))
     {
-        // let led chips some time to start
+        // let LED chips some time to start
         for (int i = 0; i < 750; ++i)
             asm volatile("nop");
     }
@@ -317,31 +263,28 @@ void checkStripsForColor()
     prevLightMode = currentLightMode;
 }
 
-void initDigitalLED()
+void AddressableLeds::initDigitalLED()
 {
-    digitalLED.item[0].channel = std::log2(DATA1_Pin);
-    digitalLED.item[0].frameBufferPointer = ledCurrentData.data();
-    digitalLED.item[0].frameBufferSize = Strip1Pixels;
+    ledStruct.item[0].channel = std::log2(DATA1_Pin);
+    ledStruct.item[0].frameBufferPointer = ledCurrentData.data();
+    ledStruct.item[0].frameBufferSize = Strip1Pixels;
 
-    digitalLED.item[1].channel = std::log2(DATA2_Pin);
-    digitalLED.item[1].frameBufferPointer = ledCurrentData.data() + Strip1Pixels;
-    digitalLED.item[1].frameBufferSize = Strip2Pixels + Strip3Pixels;
+    ledStruct.item[1].channel = std::log2(DATA2_Pin);
+    ledStruct.item[1].frameBufferPointer = ledCurrentData.data() + Strip1Pixels;
+    ledStruct.item[1].frameBufferSize = Strip2Pixels + Strip3Pixels;
 
-    HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_HALFCPLT_CB_ID, transferHalfHandler);
-    HAL_DMA_RegisterCallback(&hdma_tim1_ch1, HAL_DMA_XFER_CPLT_CB_ID, transferCompleteHandler);
-
-    HAL_DMA_Start(&hdma_tim1_up, reinterpret_cast<uint32_t>(dLED_IOs),
+    HAL_DMA_Start(DmaTimerUpdate, reinterpret_cast<uint32_t>(dLED_IOs),
                   reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BSRR), 1);
 
-    HAL_DMA_Start(&hdma_tim1_ch2, reinterpret_cast<uint32_t>(dLED_IOs),
+    HAL_DMA_Start(DmaTimerChannel2, reinterpret_cast<uint32_t>(dLED_IOs),
                   reinterpret_cast<uint32_t>(&DATA1_GPIO_Port->BRR), 1);
 
-    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
-    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_CC1);
-    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_CC2);
+    __HAL_TIM_ENABLE_DMA(LedTimer, TIM_DMA_UPDATE);
+    __HAL_TIM_ENABLE_DMA(LedTimer, TIM_DMA_CC1);
+    __HAL_TIM_ENABLE_DMA(LedTimer, TIM_DMA_CC2);
 }
 
-void showTestColors()
+void AddressableLeds::showTestColors()
 {
     ledCurrentData[0].red = 255;
     ledCurrentData[Strip1Pixels - 1].green = 255;
@@ -355,12 +298,9 @@ void showTestColors()
     checkStripsForColor();
 }
 
-} // namespace
-
-extern "C" void digitalLEDTask(void *)
+void AddressableLeds::taskMain(void *)
 {
     initDigitalLED();
-
     showTestColors();
 
     auto lastWakeTime = xTaskGetTickCount();
@@ -377,88 +317,5 @@ extern "C" void digitalLEDTask(void *)
             // turn on mosfet if needed
             checkStripsForColor();
         }
-    }
-}
-
-extern "C" void ledFadingTask(void *)
-{
-    constexpr auto FadingTime = 300.0_ms;
-    constexpr auto DelayTime = 8.0_ms;
-    constexpr auto NumberOfSteps = (FadingTime / DelayTime).getMagnitude<uint8_t>();
-
-    uint8_t factor;
-    bool restart = false;
-
-    while (true)
-    {
-        if (!restart)
-            xTaskNotifyWait(0, ULONG_MAX, nullptr, portMAX_DELAY);
-
-        restart = false;
-        factor = NumberOfSteps - 1;
-
-        // calc difference between current and target data
-        for (uint32_t i = 0; i < TotalPixels; i++)
-        {
-            ledDiffData[i].green = ledCurrentData[i].green - ledTargetData[i].green;
-            ledDiffData[i].red = ledCurrentData[i].red - ledTargetData[i].red;
-            ledDiffData[i].blue = ledCurrentData[i].blue - ledTargetData[i].blue;
-            ledDiffData[i].white = ledCurrentData[i].white - ledTargetData[i].white;
-        }
-
-        ledTargetData2 = ledTargetData;
-
-        while (true)
-        {
-            // apply difference multiplied by factor to current data
-            for (uint32_t i = 0; i < TotalPixels; i++)
-            {
-                ledCurrentData[i].green = ledTargetData2[i].green +
-                                          (factor * ledDiffData[i].green) / NumberOfSteps; // green
-
-                ledCurrentData[i].red =
-                    ledTargetData2[i].red + (factor * ledDiffData[i].red) / NumberOfSteps; // red
-
-                ledCurrentData[i].blue =
-                    ledTargetData2[i].blue + (factor * ledDiffData[i].blue) / NumberOfSteps; // blue
-
-                ledCurrentData[i].white = ledTargetData2[i].white +
-                                          (factor * ledDiffData[i].white) / NumberOfSteps; // white
-            }
-
-            // trigger task to render led data
-            xTaskNotify(digitalLEDHandle, 1, eSetBits);
-
-            if (factor == 0)
-                break;
-
-            factor--;
-
-            uint32_t notifiedValue;
-            xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, toOsTicks(DelayTime));
-            if ((notifiedValue & 0x01U) != 0)
-            {
-                // restart fading
-                restart = true;
-                break;
-            }
-        }
-
-        // trigger mosfet zero check task if needed
-        if (!restart)
-            xTaskNotify(zeroCheckerHandle, 1, eSetBits);
-    }
-}
-
-extern "C" void zeroCheckerTask(void *)
-{
-    constexpr auto TaskDelay = 5.0_s;
-
-    while (true)
-    {
-        uint32_t notifiedValue;
-        xTaskNotifyWait(0, ULONG_MAX, &notifiedValue, toOsTicks(TaskDelay));
-
-        checkStripsForColor();
     }
 }

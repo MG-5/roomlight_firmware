@@ -61,6 +61,11 @@ int32_t Task::notifyFromISR(const uint32_t ulValue, const NotifyAction eAction,
 #endif
 }
 
+void Task::notifyGiveFromISR(int32_t *pxHigherPriorityTaskWoken)
+{
+    vTaskNotifyGiveFromISR(taskHandle, pxHigherPriorityTaskWoken);
+}
+
 Task::~Task()
 {
     if (taskHandle != nullptr)
