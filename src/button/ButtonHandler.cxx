@@ -18,28 +18,30 @@ void ButtonHandler::taskMain(void *)
 
 void ButtonHandler::buttonCallback(util::Button::Action action)
 {
+    updateLedState(action);
+    setTargetLeds();
+}
+
+void ButtonHandler::updateLedState(util::Button::Action &action)
+{
     switch (action)
     {
     case Button::Action::ShortPress:
     {
-        LedSegment seg;
-
         switch (addressableLeds.getLightState())
         {
         case AddressableLeds::LightState::Off:
+            addressableLeds.setWarmWhite(true);
             addressableLeds.setLightState(AddressableLeds::LightState::FullWhite);
             addressableLeds.setLightMode(AddressableLeds::LightMode::BothStrips);
-            seg.white = 255;
             break;
 
         case AddressableLeds::LightState::FullWhite:
             addressableLeds.setLightState(AddressableLeds::LightState::MediumWhite);
-            seg.white = 128;
             break;
 
         case AddressableLeds::LightState::MediumWhite:
             addressableLeds.setLightState(AddressableLeds::LightState::LowWhite);
-            seg.white = 64;
             break;
 
         case AddressableLeds::LightState::LowWhite:
@@ -53,17 +55,18 @@ void ButtonHandler::buttonCallback(util::Button::Action action)
             // block button inputs
             return;
         }
-
-        for (auto &targetSeg : ledFading.getTargetArray())
-            targetSeg = seg;
-
-        ledFading.notify(1, util::wrappers::NotifyAction::SetBits);
     }
     break;
 
     case Button::Action::LongPress:
     {
-        if (addressableLeds.getLightMode() == AddressableLeds::LightMode::BothStrips)
+        if (addressableLeds.getLightState() == AddressableLeds::LightState::Off)
+        {
+            addressableLeds.setLightMode(AddressableLeds::LightMode::BothStrips);
+            addressableLeds.setWarmWhite(false);
+            addressableLeds.setLightState(AddressableLeds::LightState::FullWhite);
+        }
+        else if (addressableLeds.getLightMode() == AddressableLeds::LightMode::BothStrips)
         {
             addressableLeds.setLightMode(AddressableLeds::LightMode::OnlyStrip1);
             addressableLeds.notify(1, util::wrappers::NotifyAction::SetBits);
@@ -79,4 +82,42 @@ void ButtonHandler::buttonCallback(util::Button::Action action)
     case Button::Action::StopLongPress:
         break;
     }
+}
+
+void ButtonHandler::setTargetLeds()
+{
+    if (addressableLeds.getLightState() == AddressableLeds::LightState::Custom ||
+        addressableLeds.getLightState() == AddressableLeds::LightState::System)
+        return;
+
+    LedSegment seg; // empty segment
+
+    if (addressableLeds.getLightState() != AddressableLeds::LightState::Off)
+    {
+        seg.white = 255;
+
+        if (!addressableLeds.isWarmWhite())
+        {
+            seg.blue = 170;
+            seg.green = 60;
+        }
+    }
+
+    if (addressableLeds.getLightState() == AddressableLeds::LightState::MediumWhite)
+    {
+        seg.white /= 2;
+        seg.blue /= 2;
+        seg.green /= 2;
+    }
+    else if (addressableLeds.getLightState() == AddressableLeds::LightState::LowWhite)
+    {
+        seg.white /= 4;
+        seg.blue /= 4;
+        seg.green /= 4;
+    }
+
+    for (auto &ledSegment : ledFading.getTargetArray())
+        ledSegment = seg;
+
+    ledFading.notify(1, util::wrappers::NotifyAction::SetBits);
 }

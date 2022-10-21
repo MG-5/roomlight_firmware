@@ -42,6 +42,16 @@ public:
         OnlyStrip1
     };
 
+    void setWarmWhite(bool value)
+    {
+        warmWhite = value;
+    }
+
+    [[nodiscard]] bool isWarmWhite() const
+    {
+        return warmWhite;
+    }
+
     void setLightState(LightState newState)
     {
         currentLightState = newState;
@@ -83,6 +93,8 @@ private:
     LightMode currentLightMode = LightMode::BothStrips;
     LightState prevLightState = currentLightState;
     LightMode prevLightMode = currentLightMode;
+
+    bool warmWhite = true;
 
     util::Gpio mosfets[NumberOfDataPins] = {{EN_MOS1_GPIO_Port, EN_MOS1_Pin},
                                             {EN_MOS2_GPIO_Port, EN_MOS2_Pin}};

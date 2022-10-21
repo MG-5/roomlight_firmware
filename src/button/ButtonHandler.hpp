@@ -32,6 +32,8 @@ private:
     LedFading &ledFading;
 
     void buttonCallback(util::Button::Action action);
+    void updateLedState(util::Button::Action &action);
+    void setTargetLeds();
 
     util::Gpio touchButtonGpio{Touch_GPIO_Port, Touch_Pin};
     util::Button touchButton{touchButtonGpio,
