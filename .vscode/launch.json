@@ -12,7 +12,7 @@
             "executable": "${workspaceFolder}/build/${workspaceFolderBasename}.elf",
             "servertype": "stutil",
             "device": "STM32F103CB",
-            "runToMain": true
+            "runToEntryPoint": "main"
         }
     ]
 }
