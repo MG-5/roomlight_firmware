@@ -34,10 +34,9 @@ public:
 
     util::wrappers::EventGroup wifiEvents{};
 
-    Wifi(util::wrappers::StreamBuffer &txMessageBuffer, util::wrappers::StreamBuffer &packetBuffer)
+    Wifi(util::wrappers::StreamBuffer &txMessageBuffer)
         : TaskWithMemberFunctionBase("wifiDaemonTask", 128, osPriorityLow), //
-          txMessageBuffer(txMessageBuffer),                                 //
-          packetBuffer(packetBuffer){};
+          txMessageBuffer(txMessageBuffer){};
 
     Mode getMode();
 
@@ -46,7 +45,6 @@ public:
     /// module is currently in unless forceRestart is set to true.
     void setMode(Wifi::Mode mode, bool forceRestart = false);
 
-    void receiveData(const uint8_t *data, uint32_t length);
     bool checkConnection();
     void sendResponsePacket(PacketHeader *header, const uint8_t *payload);
 
@@ -55,20 +53,12 @@ protected:
 
 private:
     util::wrappers::StreamBuffer &txMessageBuffer;
-    util::wrappers::StreamBuffer &packetBuffer;
 
     Mode mode = Wifi::Mode::Disabled;
 
     // TX
     static constexpr auto TxPacketBufferSize = 64;
     uint8_t finalFrame[TxPacketBufferSize];
-
-    // RX
-    size_t bufferPosition = 0;
-    static constexpr auto RxDataBufferSize = 1024;
-    uint8_t rxDataBuffer[RxDataBufferSize];
-
-    static constexpr auto MaximumPayloadSize = sizeof(LedSegment) * TotalPixels;
 
     util::Gpio espGpio0{ESP_GPIO0_GPIO_Port, ESP_GPIO0_Pin};
     util::Gpio espEnable{ESP_EN_GPIO_Port, ESP_EN_Pin};

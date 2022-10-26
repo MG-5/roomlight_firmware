@@ -46,17 +46,14 @@ private:
     ButtonHandler buttonHandler{addressableLeds, ledFading};
 
     // wireless stuff
-    /*
     static constexpr auto TxMessageBufferSize = 64;
     util::wrappers::StreamBuffer txMessageBuffer{TxMessageBufferSize, 0};
 
-    static constexpr auto PacketBufferSize = 1024 + 128;
-    util::wrappers::StreamBuffer packetBuffer{PacketBufferSize, 0};
-
-    Wifi wifi{txMessageBuffer, packetBuffer};
+    static constexpr auto RxStreamBufferSize = 1024;
+    util::wrappers::StreamBuffer rxStream{RxStreamBufferSize, 1};
+    Wifi wifi{txMessageBuffer};
     UartTx uartTx{EspUartPeripherie, txMessageBuffer};
-    UartRx uartRx{EspUartPeripherie, wifi};
-    PacketProcessor packetProcessor{packetBuffer, wifi,       addressableLeds,
-                                    ledFading,    ledVoltage, ledCurrent};
-    */
+    UartRx uartRx{EspUartPeripherie, rxStream};
+    PacketProcessor packetProcessor{rxStream,  wifi,       addressableLeds,
+                                    ledFading, ledVoltage, ledCurrent};
 };

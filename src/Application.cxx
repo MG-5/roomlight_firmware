@@ -42,22 +42,14 @@ Application::Application()
         { getApplicationInstance().addressableLeds.transferCompleteHandler(); });
 
     // uart stuff
-    /*
     result = HAL_UART_RegisterCallback( //
         EspUartPeripherie, HAL_UART_TX_COMPLETE_CB_ID,
         [](UART_HandleTypeDef *) //
         { getApplicationInstance().uartTx.notifyTxTask(); });
 
-    result = HAL_UART_RegisterCallback( //
-        EspUartPeripherie, HAL_UART_RX_HALFCOMPLETE_CB_ID,
-        [](UART_HandleTypeDef *) //
-        { getApplicationInstance().uartRx.notifyRxTask(); });
-
-    result = HAL_UART_RegisterCallback( //
-        EspUartPeripherie, HAL_UART_RX_COMPLETE_CB_ID,
-        [](UART_HandleTypeDef *) //
-        { getApplicationInstance().uartRx.notifyRxTask(); });
-    */
+    result = HAL_UART_RegisterRxEventCallback(EspUartPeripherie,                     //
+                                              [](UART_HandleTypeDef *, uint16_t pos) //
+                                              { instance->uartRx.rxEventsFromISR(pos); });
 
     SafeAssert(result == HAL_OK);
 }

@@ -5,27 +5,10 @@
 
 void PacketProcessor::taskMain(void *)
 {
-    uint8_t *payload = nullptr;
-
     while (true)
     {
-        payload = nullptr;
-        auto length = packetBuffer.receive(packetFrame, PacketFrameSize, portMAX_DELAY);
-
-        if (length == 0)
-        {
-            packetBuffer.reset();
+        if (!extractPacketFromBuffer())
             continue;
-        }
-
-        PacketHeader header;
-        std::memcpy(&header, packetFrame, sizeof(PacketHeader));
-
-        if ((header.src_dest & DestMask) != LedPcb)
-            continue; // packet is not relevant to us
-
-        if (header.payloadSize > 0)
-            payload = packetFrame + sizeof(PacketHeader);
 
         if (header.command & ResponseMask)
         {
@@ -122,4 +105,65 @@ void PacketProcessor::taskMain(void *)
         }
         wifi.sendResponsePacket(&header, nullptr);
     }
+}
+
+bool PacketProcessor::extractPacketFromBuffer()
+{
+    payload = nullptr;
+
+    if (bufferStartPosition == bufferLastPosition)
+    {
+        bufferStartPosition = 0;
+        bufferLastPosition = 0;
+    }
+
+    const auto NumberOfBytes = rxStream.receive(
+        packetBuffer + bufferLastPosition, PacketBufferSize - bufferLastPosition, portMAX_DELAY);
+
+    bufferLastPosition += NumberOfBytes;
+
+    if (bufferLastPosition >= PacketBufferSize)
+    {
+        bufferStartPosition = 0;
+        bufferLastPosition = 0;
+    }
+
+    while (true)
+    {
+        if (bufferLastPosition - bufferStartPosition < sizeof(PacketHeader))
+        {
+            // no header to read in buffer
+            // wait for new bytes from UART
+            return false;
+        }
+
+        std::memcpy(&header, packetBuffer + bufferStartPosition, sizeof(PacketHeader));
+
+        if (header.magic == ProtocolMagic)
+            break; // header found
+
+        // no valid packet header found in buffer
+        // get rid the first byte in buffer and try it again
+        bufferStartPosition++;
+    }
+
+    if (header.payloadSize > (bufferLastPosition - bufferStartPosition) - sizeof(PacketHeader))
+    {
+        // excepted payload size is greater than the content in buffer
+        // wait for new bytes from UART
+        return false;
+    }
+
+    if ((header.src_dest & DestMask) != LedPcb)
+    {
+        // packet is not relevant to us
+        bufferStartPosition += sizeof(PacketHeader) + header.payloadSize;
+        return false;
+    }
+
+    if (header.payloadSize > 0)
+        payload = packetBuffer + bufferStartPosition + sizeof(PacketHeader);
+
+    bufferStartPosition += sizeof(PacketHeader) + header.payloadSize;
+    return true;
 }

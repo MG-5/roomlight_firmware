@@ -24,7 +24,7 @@ void Wifi::setMode(Mode newMode, bool forceRestart)
     espEnable.write(util::Gpio::Low);
     espReset.write(util::Gpio::Low);
 
-    packetBuffer.reset();
+    // txMessageBuffer.reset();
 
     if (newMode == Mode::Programming)
         espGpio0.write(util::Gpio::Low);
@@ -87,68 +87,6 @@ bool Wifi::checkConnection()
 }
 
 // -------------------------------------------------------------------------------------------------
-void Wifi::receiveData(const uint8_t *data, uint32_t length)
-{
-    if (bufferPosition + length > RxDataBufferSize)
-    {
-        // Remaining data is too large, so we need to clear the entire buffer
-        bufferPosition = 0;
-        return;
-    }
-
-    std::memcpy(rxDataBuffer + bufferPosition, data, length);
-    bufferPosition += length;
-
-    while (true)
-    {
-        if (bufferPosition < sizeof(PacketHeader))
-            return;
-
-        auto header = reinterpret_cast<const PacketHeader *>(rxDataBuffer);
-        if (header->magic != ProtocolMagic)
-        {
-            // invalid packet - reset buffer
-            bufferPosition = 0;
-            return;
-        }
-
-        if (header->payloadSize > MaximumPayloadSize)
-        {
-            bufferPosition = 0;
-            return;
-        }
-
-        auto messageLength = sizeof(PacketHeader) + header->payloadSize;
-
-        if (messageLength > bufferPosition)
-            return;
-
-        if (messageLength < bufferPosition)
-        {
-            // more than one packet available - split it
-            packetBuffer.send(rxDataBuffer, messageLength, 0);
-            bufferPosition -= messageLength;
-
-            if (bufferPosition >= sizeof(PacketHeader))
-            {
-                PacketHeader header;
-                std::memcpy(&header, rxDataBuffer + messageLength, sizeof(PacketHeader));
-            }
-
-            std::memcpy(rxDataBuffer, rxDataBuffer + messageLength, bufferPosition);
-        }
-        else if (messageLength == bufferPosition)
-        {
-            packetBuffer.send(rxDataBuffer, messageLength, 0);
-            bufferPosition = 0;
-            return;
-        }
-    }
-
-    notify(1, util::wrappers::NotifyAction::SetBits); // trigger wifi alive event
-}
-
-// -------------------------------------------------------------------------------------------------
 void Wifi::initWifi()
 {
     setMode(Mode::Normal, true);
@@ -157,7 +95,6 @@ void Wifi::initWifi()
 // -------------------------------------------------------------------------------------------------
 void Wifi::taskMain(void *)
 {
-    vTaskSuspend(nullptr);
     initWifi();
     bool result = false;
 

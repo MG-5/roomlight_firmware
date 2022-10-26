@@ -14,11 +14,11 @@
 class PacketProcessor : public util::wrappers::TaskWithMemberFunctionBase
 {
 public:
-    PacketProcessor(util::wrappers::StreamBuffer &packetBuffer, Wifi &wifi,
+    PacketProcessor(util::wrappers::StreamBuffer &rxStream, Wifi &wifi,
                     AddressableLeds &addressableLeds, LedFading &ledFading,
                     units::si::Voltage &ledVoltage, units::si::Current &ledCurrent)
         : TaskWithMemberFunctionBase("packetProcessor", 128, osPriorityAboveNormal), //
-          packetBuffer(packetBuffer),                                                //
+          rxStream(rxStream),                                                        //
           wifi(wifi),                                                                //
           addressableLeds(addressableLeds),                                          //
           ledFading(ledFading),                                                      //
@@ -30,7 +30,7 @@ protected:
     [[noreturn]] void taskMain(void *) override;
 
 private:
-    util::wrappers::StreamBuffer &packetBuffer;
+    util::wrappers::StreamBuffer &rxStream;
     Wifi &wifi;
 
     AddressableLeds &addressableLeds;
@@ -39,6 +39,14 @@ private:
     units::si::Voltage &ledVoltage;
     units::si::Current &ledCurrent;
 
-    static constexpr auto PacketFrameSize = 512 + 64;
-    uint8_t packetFrame[PacketFrameSize];
+    static constexpr auto PacketBufferSize = 1024;
+    uint8_t packetBuffer[PacketBufferSize];
+
+    uint16_t bufferStartPosition = 0;
+    uint16_t bufferLastPosition = 0;
+
+    uint8_t *payload = nullptr;
+    PacketHeader header{};
+
+    bool extractPacketFromBuffer();
 };

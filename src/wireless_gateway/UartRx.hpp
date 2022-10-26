@@ -9,16 +9,44 @@
 class UartRx : public util::wrappers::TaskWithMemberFunctionBase
 {
 public:
-    UartRx(UART_HandleTypeDef *uartPeripherie, Wifi &wifi)
-        : TaskWithMemberFunctionBase("uartRxTask", 128, osPriorityNormal), //
-          uartPeripherie(uartPeripherie),                                  //
-          wifi(wifi){};
-
-    void notifyRxTask()
+    UartRx(UART_HandleTypeDef *uartPeripherie, util::wrappers::StreamBuffer &rxStream)
+        : TaskWithMemberFunctionBase("uartRxTask", 64, osPriorityNormal), //
+          uartPeripherie(uartPeripherie),                                 //
+          rxStream(rxStream)
     {
-        auto higherPriorityTaskWoken = pdFALSE;
-        notifyGiveFromISR(&higherPriorityTaskWoken);
-        portYIELD_FROM_ISR(higherPriorityTaskWoken);
+        // Code assumes that RX dma is circular
+        SafeAssert(uartPeripherie->hdmarx != nullptr);
+        SafeAssert(uartPeripherie->hdmarx->Init.Mode == DMA_CIRCULAR);
+    };
+
+    // This interrupt is called when:
+    // - line goes to idle (only fires again when line goes active and inactive again)
+    // - DMA is half-way through buffer
+    // - DMA is completely through buffer
+    void rxEventsFromISR(uint16_t position)
+    {
+        // indicates that lastIdleLineBufferPosition wasn't reset when reception was restarted or
+        // a hardware failure (very rare)
+        //
+        // when buffer runs over DMA Complete interrupt (redirected to here) will always fire before
+        // RxIdleLine could introduce a position lower than lastIdleLineBufferPosition as
+        // it (IdleLine) requires a full byte time of silence
+        SafeAssert(lastIdleLineBufferPosition <= position);
+
+        if (lastIdleLineBufferPosition == position)
+        {
+            // on some occasions a transmission will end on full buffer or half buffer causing
+            // two calls to this with same positions -> zero new data being available
+            return;
+        }
+
+        BaseType_t woken = pdFALSE;
+        rxStream.sendFromISR(rxRawBuffer + lastIdleLineBufferPosition,
+                             position - lastIdleLineBufferPosition, &woken);
+
+        lastIdleLineBufferPosition = position % RxRawBufferSize;
+
+        portYIELD_FROM_ISR(woken);
     }
 
 protected:
@@ -26,55 +54,21 @@ protected:
     {
         vTaskDelay(pdMS_TO_TICKS(250));
 
-        __HAL_UART_ENABLE_IT(uartPeripherie, UART_IT_IDLE);
-        HAL_UART_Receive_DMA(uartPeripherie, rxBuffer, RxBufferSize);
-        // HAL_UARTEx_ReceiveToIdle_DMA(uartPeripherie, rxBuffer, RxBufferSize);
+        HAL_UARTEx_ReceiveToIdle_DMA(uartPeripherie, rxRawBuffer, RxRawBufferSize);
+
+        vTaskSuspend(nullptr);
 
         while (true)
         {
-            waitForRxComplete();
-            checkRx();
         }
     }
 
 private:
     UART_HandleTypeDef *uartPeripherie = nullptr;
-    Wifi &wifi;
+    util::wrappers::StreamBuffer &rxStream;
 
-    static constexpr auto RxBufferSize = 256;
-    uint8_t rxBuffer[RxBufferSize]{};
+    static constexpr auto RxRawBufferSize = 128;
+    uint8_t rxRawBuffer[RxRawBufferSize]{};
 
-    void waitForRxComplete()
-    {
-        notifyTake(portMAX_DELAY);
-    }
-
-    void checkRx()
-    {
-        static size_t previousBufferPosition = 0;
-        volatile auto dmaCounter = __HAL_DMA_GET_COUNTER(uartPeripherie->hdmarx);
-        size_t bufferPosition = RxBufferSize - dmaCounter;
-
-        if (bufferPosition == previousBufferPosition)
-            return;
-
-        if (bufferPosition > previousBufferPosition)
-        {
-            wifi.receiveData(rxBuffer + previousBufferPosition,
-                             bufferPosition - previousBufferPosition);
-        }
-        else
-        {
-            wifi.receiveData(rxBuffer + previousBufferPosition,
-                             RxBufferSize - previousBufferPosition);
-
-            if (bufferPosition > 0)
-                wifi.receiveData(rxBuffer, bufferPosition);
-        }
-
-        previousBufferPosition = bufferPosition;
-
-        if (previousBufferPosition == RxBufferSize)
-            previousBufferPosition = 0;
-    }
+    volatile uint16_t lastIdleLineBufferPosition = 0;
 };
