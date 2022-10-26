@@ -55,27 +55,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for statusLed */
-osThreadId_t statusLedHandle;
-const osThreadAttr_t statusLed_attributes = {
-  .name = "statusLed",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow1,
-};
-/* Definitions for buttonUpdate */
-osThreadId_t buttonUpdateHandle;
-const osThreadAttr_t buttonUpdate_attributes = {
-  .name = "buttonUpdate",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow3,
-};
-/* Definitions for uiUpdate */
-osThreadId_t uiUpdateHandle;
-const osThreadAttr_t uiUpdate_attributes = {
-  .name = "uiUpdate",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow4,
-};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -83,9 +62,6 @@ const osThreadAttr_t uiUpdate_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-void statusLedTask(void *argument);
-void buttonUpdateTask(void *argument);
-void uiUpdateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -131,15 +107,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of statusLed */
-  statusLedHandle = osThreadNew(statusLedTask, NULL, &statusLed_attributes);
-
-  /* creation of buttonUpdate */
-  buttonUpdateHandle = osThreadNew(buttonUpdateTask, NULL, &buttonUpdate_attributes);
-
-  /* creation of uiUpdate */
-  uiUpdateHandle = osThreadNew(uiUpdateTask, NULL, &uiUpdate_attributes);
-
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -166,60 +133,6 @@ __weak void StartDefaultTask(void *argument)
         osDelay(1);
     }
   /* USER CODE END StartDefaultTask */
-}
-
-/* USER CODE BEGIN Header_statusLedTask */
-/**
-* @brief Function implementing the statusLed thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_statusLedTask */
-__weak void statusLedTask(void *argument)
-{
-  /* USER CODE BEGIN statusLedTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END statusLedTask */
-}
-
-/* USER CODE BEGIN Header_buttonUpdateTask */
-/**
-* @brief Function implementing the buttonUpdate thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_buttonUpdateTask */
-__weak void buttonUpdateTask(void *argument)
-{
-  /* USER CODE BEGIN buttonUpdateTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END buttonUpdateTask */
-}
-
-/* USER CODE BEGIN Header_uiUpdateTask */
-/**
-* @brief Function implementing the uiUpdate thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_uiUpdateTask */
-__weak void uiUpdateTask(void *argument)
-{
-  /* USER CODE BEGIN uiUpdateTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END uiUpdateTask */
 }
 
 /* Private application code --------------------------------------------------*/
