@@ -1,48 +1,48 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 // clang-format off
 
 // packet commands
-#define ESP_CONNECTION_TEST         0x01
-#define ESP_GET_MAC_ADDR            0x02
-#define ESP_RESTART                 0x03
-// 0x04 - 0x0F reserved for ESP
+constexpr auto EspConnectionTest    = 0x01;
+constexpr auto EspGetMacAddress     = 0x02;
+constexpr auto EspRestart           = 0x03;
+// = 0x04 - = 0x0F reserved for ESP
 
-#define LED_SET_ALL                 0x10
-#define LED_SET_SEGMENTS            0x11
-#define LED_FADE_SOFT               0x12
-#define LED_FADE_HARD               0x13
-#define LED_GET_CURRENT             0x14
-#define LED_GET_VOLTAGE             0x15
-#define LED_GET_ERROR_CODE          0x16
-#define LED_ESP_OTA_STARTED         0x17
-#define LED_ESP_OTA_FINISHED        0x18
-#define LED_SET_STATUS_LED          0x19
-#define LED_DEBUG_PRINT             0x1A
+constexpr auto LedSetAll            = 0x10;
+constexpr auto LedSetSegments       = 0x11;
+constexpr auto LedFadeSoft          = 0x12;
+constexpr auto LedFadeHard          = 0x13;
+constexpr auto LedGetCurrent        = 0x14;
+constexpr auto LedGetVoltage        = 0x15;
+constexpr auto LedGetErrorCode      = 0x16;
+constexpr auto LedEspOtaStarted     = 0x17;
+constexpr auto LedEspOtaFinished    = 0x18;
+constexpr auto LedSetStatusLed      = 0x19;
+constexpr auto LedDebugPrint        = 0x1A;
 
 // packet status
-#define RESPONSE_MASK               0x80
-#define RESPONSE_OKAY               0x00
-#define RESPONSE_OPERATION_FAILED   0x01
-#define RESPONSE_CRC_FAILED         0x02
-#define RESPONSE_NOT_SUPPORTED      0x03
-#define RESPONSE_INVALID_COMMAND    0x04
+constexpr auto ResponseMask             = 0x80;
+constexpr auto ResponseOkay             = 0x00;
+constexpr auto ResponseOperationFailed  = 0x01;
+constexpr auto ResponseCrcFailed        = 0x02;
+constexpr auto ResponseNotSupported     = 0x03;
+constexpr auto ResponseInvalidCommand   = 0x04;
 
 // source/destination
-#define SRC_MASK                    0xF0
-#define SRC_POS                     4
-#define DEST_MASK                   0x0F
+constexpr auto SrcMask  = 0xF0;
+constexpr auto SrcPos   = 4;
+constexpr auto DestMask = 0x0F;
 
-#define TCP1                        0x01
-#define TCP2                        0x02
-#define TCP3                        0x03
-#define ESP_PCB                     0x04
-#define LED_PCB                     0x05
+constexpr auto Tcp1     = 0x01;
+constexpr auto Tcp2     = 0x02;
+constexpr auto Tcp3     = 0x03;
+constexpr auto EspPcb   = 0x04;
+constexpr auto LedPcb   = 0x05;
 // clang-format on
 
-constexpr auto PROTOCOL_MAGIC = 0xD7;
+constexpr auto ProtocolMagic = 0xD7;
 
 // packet header
 struct PacketHeader
@@ -50,11 +50,11 @@ struct PacketHeader
     uint8_t src_dest = 0;
     uint8_t command = 0;
     uint8_t status = 0;
-    uint8_t magic = PROTOCOL_MAGIC;
+    uint8_t magic = ProtocolMagic;
     uint16_t payloadSize = 0;
 };
 
-struct LEDSegment
+struct LedSegment
 {
     uint8_t green = 0;
     uint8_t red = 0;
@@ -65,5 +65,5 @@ struct LEDSegment
 struct SetLedSegment
 {
     uint8_t position = 0;
-    LEDSegment segment;
+    LedSegment segment;
 };

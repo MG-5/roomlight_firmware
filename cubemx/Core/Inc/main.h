@@ -84,12 +84,12 @@ void Error_Handler(void);
 #define ESP_RST_GPIO_Port GPIOB
 #define ESP_EN_Pin GPIO_PIN_11
 #define ESP_EN_GPIO_Port GPIOB
-#define SW_BLUE_Pin GPIO_PIN_15
-#define SW_BLUE_GPIO_Port GPIOA
-#define SW_GREEN_Pin GPIO_PIN_4
-#define SW_GREEN_GPIO_Port GPIOB
-#define SW_RED_Pin GPIO_PIN_5
-#define SW_RED_GPIO_Port GPIOB
+#define SwitchBlueChannel_Pin GPIO_PIN_15
+#define SwitchBlueChannel_GPIO_Port GPIOA
+#define SwitchGreenChannel_Pin GPIO_PIN_4
+#define SwitchGreenChannel_GPIO_Port GPIOB
+#define SwitchRedChannel_Pin GPIO_PIN_5
+#define SwitchRedChannel_GPIO_Port GPIOB
 #define Touch_Pin GPIO_PIN_6
 #define Touch_GPIO_Port GPIOB
 #define DATA1_Pin GPIO_PIN_7
@@ -107,5 +107,3 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
