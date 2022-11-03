@@ -35,6 +35,7 @@ set(Sources
 
 	src/leds/AddressableLeds.cxx
 	src/leds/LedFading.cxx
+	src/leds/StateMachine.cxx
 	src/leds/StatusLeds.cxx
 
 	src/wireless_gateway/PacketProcessor.cxx

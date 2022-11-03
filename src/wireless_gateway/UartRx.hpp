@@ -50,17 +50,14 @@ public:
     }
 
 protected:
-    [[noreturn]] void taskMain(void *) override
+    void taskMain(void *) override
     {
         vTaskDelay(pdMS_TO_TICKS(250));
 
         HAL_UARTEx_ReceiveToIdle_DMA(uartPeripherie, rxRawBuffer, RxRawBufferSize);
 
+        // nothing to do
         vTaskSuspend(nullptr);
-
-        while (true)
-        {
-        }
     }
 
 private:

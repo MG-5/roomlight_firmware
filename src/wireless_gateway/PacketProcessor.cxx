@@ -1,5 +1,6 @@
 #include "PacketProcessor.hpp"
 #include "leds/ledConstants.hpp"
+#include "protocol.hpp"
 
 #include <cstring>
 
@@ -10,6 +11,7 @@ void PacketProcessor::taskMain(void *)
         if (!extractPacketFromBuffer())
             continue;
 
+        /*
         if (header.command & ResponseMask)
         {
             header.command &= ~ResponseMask; // remove bit for further processing
@@ -27,10 +29,12 @@ void PacketProcessor::taskMain(void *)
             }
             continue;
         }
+        */
 
         switch (header.command)
         {
-        case LedSetAll:
+        case command::FullLedData:
+            /*
             if (header.payloadSize == 4 * TotalPixels)
             {
                 std::memcpy(reinterpret_cast<uint8_t *>(ledFading.getTargetArray().data()), payload,
@@ -39,9 +43,11 @@ void PacketProcessor::taskMain(void *)
             }
             else
                 header.status = ResponseOperationFailed;
+            */
             break;
 
-        case LedSetSegments:
+        case command::SetSegment:
+            /*
             if (header.payloadSize == sizeof(SetLedSegment))
             {
                 auto *segmentToSet = reinterpret_cast<SetLedSegment *>(payload);
@@ -50,57 +56,91 @@ void PacketProcessor::taskMain(void *)
             }
             else
                 header.status = ResponseOperationFailed;
+            */
             break;
 
-        case LedFadeSoft:
-            header.status = ResponseOkay;
+        case command::FadeSoft:
+            // header.status = ResponseOkay;
             addressableLeds.setLightState(AddressableLeds::LightState::Custom);
             ledFading.notify(1, util::wrappers::NotifyAction::SetBits);
             break;
 
-        case LedFadeHard:
+        case command::FadeHard:
             std::memcpy(addressableLeds.getCurrentLedArray().data(),
                         ledFading.getTargetArray().data(), TotalPixels * sizeof(uint32_t));
-            header.status = ResponseOkay;
+            // header.status = ResponseOkay;
             addressableLeds.setLightState(AddressableLeds::LightState::Custom);
             addressableLeds.notify(1, util::wrappers::NotifyAction::SetBits);
             break;
 
-        case LedGetCurrent:
-            header.status = ResponseOkay;
+        case command::WarmWhite:
+            addressableLeds.setWarmWhite(true);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::NeutralWhite:
+            addressableLeds.setWarmWhite(false);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::AllStrips:
+            addressableLeds.setLightMode(AddressableLeds::LightMode::BothStrips);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::OneStrips:
+            addressableLeds.setLightMode(AddressableLeds::LightMode::OnlyStrip1);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::LightsLow:
+            addressableLeds.setLightState(AddressableLeds::LightState::LowWhite);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::LightsMedium:
+            addressableLeds.setLightState(AddressableLeds::LightState::MediumWhite);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::LightsHigh:
+            addressableLeds.setLightState(AddressableLeds::LightState::FullWhite);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::LightsOff:
+            addressableLeds.setLightState(AddressableLeds::LightState::Off);
+            stateMachine.updateTargetLeds();
+            break;
+
+        case command::GetCurrent:
+            // header.status = ResponseOkay;
             header.payloadSize = sizeof(ledCurrent);
             wifi.sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledCurrent));
             continue;
             break;
 
-        case LedGetVoltage:
-            header.status = ResponseOkay;
+        case command::GetVoltage:
+            // header.status = ResponseOkay;
             header.payloadSize = sizeof(ledVoltage);
             wifi.sendResponsePacket(&header, reinterpret_cast<uint8_t *>(&ledVoltage));
             continue;
+
+        case command::GetErrorCode:
+            // header.status = ResponseNotSupported;
             break;
 
-        case LedGetErrorCode:
-            header.status = ResponseNotSupported;
-            break;
-
-        case LedEspOtaStarted:
+        case command::EspOtaStarted:
             wifi.wifiEvents.setBits(Wifi::EventWifiUpgradeStarted);
             // do not disturb ESP
             continue;
-            break;
 
-        case LedEspOtaFinished:
+        case command::EspOtaFinished:
             wifi.wifiEvents.setBits(Wifi::EventWifiUpgradeFinished);
             continue;
-            break;
-
-        case LedSetStatusLed:
-            header.status = ResponseNotSupported;
-            break;
 
         default:
-            header.status = ResponseInvalidCommand;
+            // header.status = ResponseInvalidCommand;
             break;
         }
         wifi.sendResponsePacket(&header, nullptr);
@@ -151,13 +191,6 @@ bool PacketProcessor::extractPacketFromBuffer()
     {
         // excepted payload size is greater than the content in buffer
         // wait for new bytes from UART
-        return false;
-    }
-
-    if ((header.src_dest & DestMask) != LedPcb)
-    {
-        // packet is not relevant to us
-        bufferStartPosition += sizeof(PacketHeader) + header.payloadSize;
         return false;
     }
 

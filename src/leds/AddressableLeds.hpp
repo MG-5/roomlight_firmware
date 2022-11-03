@@ -2,7 +2,6 @@
 
 #include "core/SafeAssert.h"
 #include "ledConstants.hpp"
-#include "protocol.hpp"
 #include "util/gpio.hpp"
 #include "wrappers/Task.hpp"
 
