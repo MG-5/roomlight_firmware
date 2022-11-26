@@ -10,7 +10,6 @@
 #include "StatusLeds.hpp"
 #include "gamma/GammaLUT.hpp"
 #include "helpers/freertos.hpp"
-#include "protocol.hpp"
 #include "units/si/frequency.hpp"
 
 #include <climits>

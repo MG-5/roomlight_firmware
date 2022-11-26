@@ -1,7 +1,3 @@
-#include "FreeRTOS.h"
-#include "event_groups.h"
-#include "task.h"
-
 #include <climits>
 #include <cstring>
 
@@ -50,28 +46,21 @@ void Wifi::sendPacket(const PacketHeader *header, const uint8_t *payload)
 }
 
 // -------------------------------------------------------------------------------------------------
-void Wifi::swapSrcDest(uint8_t &val)
-{
-    uint8_t tmp = val;
-    val <<= SrcPos;
-    val |= (tmp >> SrcPos) & DestMask;
-}
-
-// -------------------------------------------------------------------------------------------------
 void Wifi::sendResponsePacket(PacketHeader *const header, const uint8_t *payload)
 {
-    header->command |= ResponseMask;
+    // header->command |= ResponseMask;
 
     if (!payload)
         header->payloadSize = 0;
 
-    swapSrcDest(header->src_dest);
     sendPacket(header, payload);
 }
 
 // -------------------------------------------------------------------------------------------------
 bool Wifi::checkConnection()
 {
+    return true;
+    /*
     PacketHeader header;
     header.src_dest = (LedPcb << SrcPos) | EspPcb;
     header.command = EspConnectionTest;
@@ -84,6 +73,7 @@ bool Wifi::checkConnection()
     EventBits_t uxBits = wifiEvents.waitBits(EventConnection, pdTRUE, pdTRUE, pdMS_TO_TICKS(10));
 
     return (uxBits & EventConnection);
+    */
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -96,6 +86,8 @@ void Wifi::initWifi()
 void Wifi::taskMain(void *)
 {
     initWifi();
+
+    vTaskSuspend(nullptr);
     bool result = false;
 
     while (true)

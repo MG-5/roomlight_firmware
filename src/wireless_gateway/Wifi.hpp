@@ -1,6 +1,7 @@
 #pragma once
 
 #include "leds/ledConstants.hpp"
+#include "protocol.hpp"
 #include "util/gpio.hpp"
 #include "wrappers/EventGroup.hpp"
 #include "wrappers/StreamBuffer.hpp"

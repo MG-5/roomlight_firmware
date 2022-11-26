@@ -9,6 +9,7 @@
 #include "button/ButtonHandler.hpp"
 #include "leds/AddressableLeds.hpp"
 #include "leds/LedFading.hpp"
+#include "leds/StateMachine.hpp"
 #include "leds/StatusLeds.hpp"
 
 #include "wireless_gateway/PacketProcessor.hpp"
@@ -41,9 +42,10 @@ private:
     AddressableLeds addressableLeds{DmaLedTimerChannel1};
     StatusLeds statusLeds{addressableLeds};
     LedFading ledFading{addressableLeds};
+    StateMachine stateMachine{addressableLeds, ledFading};
 
     // touch button
-    ButtonHandler buttonHandler{addressableLeds, ledFading};
+    ButtonHandler buttonHandler{stateMachine};
 
     // wireless stuff
     static constexpr auto TxMessageBufferSize = 64;
@@ -54,6 +56,6 @@ private:
     Wifi wifi{txMessageBuffer};
     UartTx uartTx{EspUartPeripherie, txMessageBuffer};
     UartRx uartRx{EspUartPeripherie, rxStream};
-    PacketProcessor packetProcessor{rxStream,  wifi,       addressableLeds,
-                                    ledFading, ledVoltage, ledCurrent};
+    PacketProcessor packetProcessor{rxStream,     wifi,       addressableLeds, ledFading,
+                                    stateMachine, ledVoltage, ledCurrent};
 };
