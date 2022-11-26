@@ -49,12 +49,21 @@ public:
         portYIELD_FROM_ISR(woken);
     }
 
+    void uartErrorFromISR()
+    {
+        // partiy/noise/frame error
+        // overrun error doesn't fire in circular dma mode, stuff just gets overwritten
+
+        // simply restart uart
+        startRxUart();
+    }
+
 protected:
     void taskMain(void *) override
     {
         vTaskDelay(pdMS_TO_TICKS(250));
 
-        HAL_UARTEx_ReceiveToIdle_DMA(uartPeripherie, rxRawBuffer, RxRawBufferSize);
+        startRxUart();
 
         // nothing to do
         vTaskSuspend(nullptr);
@@ -68,4 +77,10 @@ private:
     uint8_t rxRawBuffer[RxRawBufferSize]{};
 
     volatile uint16_t lastIdleLineBufferPosition = 0;
+
+    void startRxUart()
+    {
+        lastIdleLineBufferPosition = 0;
+        HAL_UARTEx_ReceiveToIdle_DMA(uartPeripherie, rxRawBuffer, RxRawBufferSize);
+    }
 };

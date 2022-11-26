@@ -47,6 +47,11 @@ Application::Application()
                                        { instance->uartTx.notifyTxTask(); });
     SafeAssert(result == HAL_OK);
 
+    result = HAL_UART_RegisterCallback(EspUartPeripherie, HAL_UART_ERROR_CB_ID,
+                                       [](UART_HandleTypeDef *) //
+                                       { instance->uartRx.uartErrorFromISR(); });
+    SafeAssert(result == HAL_OK);
+
     result = HAL_UART_RegisterRxEventCallback(EspUartPeripherie,                     //
                                               [](UART_HandleTypeDef *, uint16_t pos) //
                                               { instance->uartRx.rxEventsFromISR(pos); });
